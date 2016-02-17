@@ -1,6 +1,7 @@
 package de.zalando.react.nakadi
 
 import akka.actor.ActorSystem
+import de.zalando.react.nakadi.client.NakadiClient
 
 
 object ReactiveNakadiConsumer {

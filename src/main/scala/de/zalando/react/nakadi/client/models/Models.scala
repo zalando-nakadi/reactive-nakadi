@@ -1,4 +1,4 @@
-package de.zalando.react.nakadi.models
+package de.zalando.react.nakadi.client.models
 
 
 case class PartitionResolutionStrategy(

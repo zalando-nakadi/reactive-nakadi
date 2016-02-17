@@ -1,16 +1,17 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.client
 
-import javax.net.ssl.SSLContext
 import java.io.ByteArrayOutputStream
+import javax.net.ssl.SSLContext
 
-import akka.util.ByteString
-import akka.http.scaladsl.{HttpsContext, Http}
-import akka.http.scaladsl.model._
-import akka.actor.{Props, ActorLogging, Actor}
-import akka.stream.scaladsl.ImplicitMaterializer
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.http.scaladsl.model.HttpMethods.POST
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.model.MediaTypes.`application/json`
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
+import akka.http.scaladsl.{Http, HttpsContext}
+import akka.stream.scaladsl.ImplicitMaterializer
+import akka.util.ByteString
+import de.zalando.react.nakadi._
 
 import scala.concurrent.Future
 

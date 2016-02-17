@@ -1,6 +1,7 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.client
 
 import akka.actor.{ActorRef, ActorSystem}
+import de.zalando.react.nakadi.ConsumerProperties
 
 import scala.concurrent.Future
 

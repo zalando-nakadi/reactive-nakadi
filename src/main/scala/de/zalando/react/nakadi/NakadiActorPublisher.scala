@@ -2,6 +2,7 @@ package de.zalando.react.nakadi
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.stream.actor.{ActorPublisherMessage, ActorPublisher}
+import de.zalando.react.nakadi.client.NakadiClientImpl
 
 
 object NakadiActorPublisher {
