@@ -15,7 +15,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-experimental" % akkaExperimentalVersion,
-  "com.typesafe.akka" %% "akka-stream-experimental" % akkaExperimentalVersion
+  "com.typesafe.akka" %% "akka-stream-experimental" % akkaExperimentalVersion,
+  "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+  "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
 )
 
 mainClass in assembly := Some("de.zalando.react.nakadi.TestApp")
