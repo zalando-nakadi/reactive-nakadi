@@ -2,7 +2,9 @@ package de.zalando.react.nakadi
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.stream.actor.{ActorPublisherMessage, ActorPublisher}
+
 import de.zalando.react.nakadi.client.NakadiClientImpl
+import de.zalando.react.nakadi.client.models.EventStreamBatch
 
 
 object NakadiActorPublisher {
@@ -15,24 +17,30 @@ object NakadiActorPublisher {
 }
 
 
-class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends ActorPublisher[String]
+class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends ActorPublisher[EventStreamBatch]
   with ActorLogging {
-
-  import NakadiActorPublisher._
 
   val client: ActorRef = consumerAndProps.nakadiClient
 
   override def preStart() {
-    self ! Consume
+    context.system.eventStream.subscribe(self, classOf[EventStreamBatch])
+    client ! NakadiClientImpl.ListenForEvents
   }
 
   override def receive = {
-    case ActorPublisherMessage.Request(_) | Consume if isActive => readDemandedItems()
+    case rawEvent: EventStreamBatch =>
+      if (isActive && totalDemand > 0)
+        onNext(rawEvent)
+
     case ActorPublisherMessage.SubscriptionTimeoutExceeded => context.stop(self)
   }
 
-  private def readDemandedItems(): Unit = {
-    client ! NakadiClientImpl.ListenForEvents
+//  private def readDemandedItems(): Unit = {
+//    client ! NakadiClientImpl.ListenForEvents
+//  }
+
+  override def postStop() = {
+    context.system.eventStream.unsubscribe(self)
   }
 
 }

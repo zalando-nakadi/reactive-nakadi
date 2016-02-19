@@ -1,7 +1,11 @@
 package de.zalando.react.nakadi.client
 
 import java.io.ByteArrayOutputStream
-import javax.net.ssl.SSLContext
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+
+import javax.net.ssl.TrustManager
+import javax.net.ssl.{X509TrustManager, SSLContext}
 
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.http.scaladsl.model.HttpMethods.POST
@@ -12,6 +16,7 @@ import akka.http.scaladsl.{Http, HttpsContext}
 import akka.stream.scaladsl.ImplicitMaterializer
 import akka.util.ByteString
 import de.zalando.react.nakadi._
+import de.zalando.react.nakadi.client.models.EventStreamBatch
 
 import scala.concurrent.Future
 
@@ -39,8 +44,20 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
 
     properties.securedConnection match {
       case true =>
-        h.setDefaultClientHttpsContext(HttpsContext(SSLContext.getDefault))
+        val sslContext = if (properties.sslVerify) SSLContext.getDefault else {
+
+          val permissiveTrustManager: TrustManager = new X509TrustManager() {
+            override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+            override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+            override def getAcceptedIssuers(): Array[X509Certificate] = Array.empty
+          }
+
+          val ctx = SSLContext.getInstance("TLS")
+          ctx.init(Array.empty, Array(permissiveTrustManager), new SecureRandom())
+          ctx
+        }
         h.outgoingConnectionTls(properties.server.toString, properties.port)
+        h.setDefaultClientHttpsContext(HttpsContext(sslContext))
       case false =>
         h.outgoingConnection(properties.server.toString, properties.port)
     }
@@ -55,14 +72,14 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
   override def postEvent(name: String, event: String, flowId: Option[String]): Future[Boolean] = {
     val uri = URI_POST_EVENTS.format(name)
 
-    // FIXME - Proper unmarshalling for `Event`
     val request = HttpRequest(uri = uri, method = POST)
       .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())))
       .withEntity(ContentType(`application/json`), event)
 
     http.singleRequest(request).map {
       case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
-        log.debug(s"Got response, body: ${entity.dataBytes.runFold(ByteString(""))(_ ++ _)}")
+        val body = entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.utf8String)
+        log.debug(s"Got response, body: $body")
         true
       case HttpResponse(code, _, _, _) =>
         log.info(s"Request failed, response code: $code")
@@ -82,13 +99,16 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
       properties.streamKeepAliveLimit
     )
 
-    val request = HttpRequest(uri = postEventUri)
+//    val request = HttpRequest(uri = s"https://${properties.server}$postEventUri")
+//      .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())),
+//        headers.Accept(MediaRange(`application/json`)))
+
+    val request = HttpRequest(uri = s"https://nakadi-sandbox.aruha-test.zalan.do/event-types/buffalo-test-topic/events")
       .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())),
         headers.Accept(MediaRange(`application/json`)))
 
     http.singleRequest(request).map {
       case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
-        //log.debug("Got response, body: " + entity.dataBytes.runFold(ByteString(""))(_ ++ _))
         consumeStream(entity)
       case HttpResponse(code, _, _, _) =>
         log.info(s"Request failed, response code: $code")
@@ -105,7 +125,9 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
      *
      * See also http://json.org/ for string parsing semantics
      */
-    println("consuming stream")
+    import spray.json._
+    import JsonProtocol._
+
     var depth: Int = 0
     var hasOpenString: Boolean = false
     val bout = new ByteArrayOutputStream(1024)
@@ -118,8 +140,21 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
         else if (!hasOpenString && byteItem == '{') depth += 1
         else if (!hasOpenString && byteItem == '}') {
           depth -= 1
-          println(bout.toString())
-          bout.reset()
+
+          if (depth == 0 && bout.size != 0) {
+            val rawEvent = bout.toString()
+            context.system.eventStream.publish(rawEvent)
+
+            println(rawEvent)
+            println("---")
+            val jsValue = rawEvent.parseJson
+            println(jsValue)
+            println("---")
+            val eventStreamBatch = jsValue.convertTo[EventStreamBatch]
+            println(eventStreamBatch)
+            println("---")
+            bout.reset()
+          }
         }
       }}
     }

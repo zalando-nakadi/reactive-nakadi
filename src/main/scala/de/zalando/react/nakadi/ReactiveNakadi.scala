@@ -3,15 +3,17 @@ package de.zalando.react.nakadi
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.actor.{WatermarkRequestStrategy, ActorPublisher}
 
+import de.zalando.react.nakadi.client.models.EventStreamBatch
+
 
 class ReactiveNakadi {
 
   def consume(props: ConsumerProperties)(implicit actorSystem: ActorSystem) = {
-    ActorPublisher[String](consumerActor(props))
+    ActorPublisher[EventStreamBatch](consumerActor(props))
   }
 
   def consume(props: ConsumerProperties, dispatcher: String)(implicit actorSystem: ActorSystem) = {
-    ActorPublisher[String](consumerActor(props, dispatcher))
+    ActorPublisher[EventStreamBatch](consumerActor(props, dispatcher))
   }
 
   def consumerActor(props: ConsumerProperties)(implicit actorSystem: ActorSystem): ActorRef = {

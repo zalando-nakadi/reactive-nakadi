@@ -19,12 +19,13 @@ object TestApp extends App {
   val nakadi = new ReactiveNakadi()
   val publisher = nakadi.consume(ConsumerProperties(
     //server = "192.168.99.100",
-    server = "nakadi-test.aurora.zalando.net",
-    port = 443,
+    server = "nakadi-sandbox.aurora.zalando.net",
+    //port = 8080,
     securedConnection = true,
-    tokenProvider = () => "95346dac-fca9-4b45-b268-83d5bf815e3b",
-    topic = "test-topic"
+    tokenProvider = () => "e3c8f2c3-101a-42c1-8d02-f82d1a5c8807",
+    topic = "buffalo-test-topic",
+    sslVerify = false
   ))
 
-  Source.fromPublisher(publisher).to(Sink.ignore)
+  Source.fromPublisher(publisher).to(Sink.foreach(x => println(s"END: $x")))
 }
