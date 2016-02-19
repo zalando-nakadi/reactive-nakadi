@@ -20,22 +20,24 @@ object ConsumerProperties {
     */
   def apply(
     server: String,
-    port: Int,
     securedConnection: Boolean,
     tokenProvider: () => String,
-    offset: String,
     topic: String
   ): ConsumerProperties = {
-    new ConsumerProperties(server, port, securedConnection, tokenProvider, topic)
+    if (securedConnection) {
+      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https//")
+    } else {
+      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 80, urlSchema = "http//")
+    }
   }
 }
 
 case class ConsumerProperties(
   server: String,
-  port: Int,
   securedConnection: Boolean,
   tokenProvider: () => String,
   topic: String,
+  port: Int = 80,
   offset: String = "earliest",
   commitInterval: Option[FiniteDuration] = None,
   consumerTimeoutSec: FiniteDuration = 5.seconds,
@@ -45,7 +47,9 @@ case class ConsumerProperties(
   streamTimeoutInSeconds: FiniteDuration = 0.seconds,
   streamKeepAliveLimit: Int = 0,
   pollParallelism: Int = 0,
-  autoReconnect: Boolean = false
+  autoReconnect: Boolean = false,
+  sslVerify: Boolean = true,
+  urlSchema: String = "https//"
 ) {
 
   /**
@@ -63,5 +67,8 @@ case class ConsumerProperties(
 
   def readFromEndOfStream(): ConsumerProperties =
     this.copy(offset = "latest")
+
+  def withPort(port: Int): ConsumerProperties =
+    this.copy(port = port)
 
 }
