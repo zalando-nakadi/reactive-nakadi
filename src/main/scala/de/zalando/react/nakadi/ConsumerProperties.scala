@@ -11,7 +11,6 @@ object ConsumerProperties {
     * Consumer Properties
     *
     * @param server The nakadi endpoint
-    *
     * @param topic
     * The high-level API hides the details of brokers from the consumer and allows consuming off the cluster of machines
     * without concern for the underlying topology. It also maintains the state of what has been consumed. The high-level API
@@ -25,9 +24,9 @@ object ConsumerProperties {
     topic: String
   ): ConsumerProperties = {
     if (securedConnection) {
-      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https//")
+      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https://")
     } else {
-      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 80, urlSchema = "http//")
+      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 80, urlSchema = "http://")
     }
   }
 }
@@ -49,7 +48,7 @@ case class ConsumerProperties(
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
   sslVerify: Boolean = true,
-  urlSchema: String = "https//"
+  urlSchema: String = "https://"
 ) {
 
   /**
@@ -70,5 +69,12 @@ case class ConsumerProperties(
 
   def withPort(port: Int): ConsumerProperties =
     this.copy(port = port)
+
+  def withUrlSchema(urlSchema: String): ConsumerProperties = {
+    if (!Seq("http://", "https://").contains(urlSchema))
+      throw new IllegalArgumentException("Must pass in valid schema of http:// or https://")
+    else
+      this.copy(urlSchema = urlSchema)
+  }
 
 }

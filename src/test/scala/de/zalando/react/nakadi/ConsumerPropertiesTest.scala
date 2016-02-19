@@ -49,6 +49,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       .consumerTimeoutSec(20.seconds)
       .readFromEndOfStream
       .withPort(9999)
+      .withUrlSchema("http://")
 
     props.server should === (server)
     props.port should === (9999)
@@ -66,6 +67,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.pollParallelism should === (0)
     props.autoReconnect should === (false)
     props.sslVerify should === (true)
+    props.urlSchema should === ("http://")
   }
 
   it should "also be able to handle unsecure connection setting" in {
@@ -94,5 +96,16 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.pollParallelism should === (0)
     props.autoReconnect should === (false)
     props.sslVerify should === (true)
+  }
+
+  it should "also should throw exception if invalid url schema passed in" in {
+    val props = ConsumerProperties(
+      server = server,
+      securedConnection = false,
+      tokenProvider = () => token,
+      topic = topic
+    )
+    intercept[IllegalArgumentException](props.withUrlSchema("someblah://"))
+
   }
 }

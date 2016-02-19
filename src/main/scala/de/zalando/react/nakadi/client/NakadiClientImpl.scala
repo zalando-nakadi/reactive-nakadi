@@ -99,11 +99,8 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
       properties.streamKeepAliveLimit
     )
 
-//    val request = HttpRequest(uri = s"https://${properties.server}$postEventUri")
-//      .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())),
-//        headers.Accept(MediaRange(`application/json`)))
-
-    val request = HttpRequest(uri = s"https://nakadi-sandbox.aruha-test.zalan.do/event-types/buffalo-test-topic/events")
+    val uri = s"${properties.urlSchema}${properties.server}$postEventUri"
+    val request = HttpRequest(uri = uri)
       .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())),
         headers.Accept(MediaRange(`application/json`)))
 
