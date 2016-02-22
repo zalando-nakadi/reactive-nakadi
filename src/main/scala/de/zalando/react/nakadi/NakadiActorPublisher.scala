@@ -28,16 +28,9 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   }
 
   override def receive = {
-    case rawEvent: EventStreamBatch =>
-      if (isActive && totalDemand > 0)
-        onNext(rawEvent)
-
+    case rawEvent: EventStreamBatch if isActive && totalDemand > 0 => onNext(rawEvent)
     case ActorPublisherMessage.SubscriptionTimeoutExceeded => context.stop(self)
   }
-
-//  private def readDemandedItems(): Unit = {
-//    client ! NakadiClientImpl.ListenForEvents
-//  }
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)

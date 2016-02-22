@@ -2,8 +2,7 @@ package de.zalando.react.nakadi
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.javadsl.Source
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{ Source, Sink }
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -19,13 +18,15 @@ object TestApp extends App {
   val nakadi = new ReactiveNakadi()
   val publisher = nakadi.consume(ConsumerProperties(
     //server = "192.168.99.100",
-    server = "nakadi-sandbox.aurora.zalando.net",
+    server = "nakadi-sandbox.aruha-test.zalan.do",
     //port = 8080,
     securedConnection = true,
-    tokenProvider = () => "e3c8f2c3-101a-42c1-8d02-f82d1a5c8807",
+    tokenProvider = () => "ac516b4f-1338-43e6-a6c3-2e98ac8e065e",
     topic = "buffalo-test-topic",
     sslVerify = false
   ))
 
-  Source.fromPublisher(publisher).to(Sink.foreach(x => println(s"END: $x")))
+  Source.fromPublisher(publisher)
+    .map(x => println(s"MAP $x"))
+    .to(Sink.foreach(x => println(s"END: $x")))
 }

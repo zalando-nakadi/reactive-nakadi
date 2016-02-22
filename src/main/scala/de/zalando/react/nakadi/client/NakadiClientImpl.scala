@@ -13,12 +13,14 @@ import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.{Http, HttpsContext}
+import akka.stream.StreamTcpException
 import akka.stream.scaladsl.ImplicitMaterializer
 import akka.util.ByteString
 import de.zalando.react.nakadi._
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 
 object NakadiClientImpl {
@@ -69,7 +71,7 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
       listenForEvents()
   }
 
-  override def postEvent(name: String, event: String, flowId: Option[String]): Future[Boolean] = {
+  override def postEvent(name: String, event: String, flowId: Option[String]): Future[Unit] = {
     val uri = URI_POST_EVENTS.format(name)
 
     val request = HttpRequest(uri = uri, method = POST)
@@ -80,12 +82,11 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
       case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
         val body = entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.utf8String)
         log.debug(s"Got response, body: $body")
-        true
       case HttpResponse(code, _, _, _) =>
         log.info(s"Request failed, response code: $code")
-        false
     }.recover {
-      case ex => log.error(ex, "Error connecting to Nakadi"); false
+      case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
+      case ex => log.error(ex, "Error connecting to Nakadi")
     }
   }
 
@@ -110,6 +111,7 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
       case HttpResponse(code, _, _, _) =>
         log.info(s"Request failed, response code: $code")
     }.recover {
+      case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
       case ex => log.error(ex, "Error connecting to Nakadi")
     }
   }
@@ -140,16 +142,12 @@ class NakadiClientImpl(val properties: ConsumerProperties) extends Actor
 
           if (depth == 0 && bout.size != 0) {
             val rawEvent = bout.toString()
-            context.system.eventStream.publish(rawEvent)
-
-            println(rawEvent)
-            println("---")
-            val jsValue = rawEvent.parseJson
-            println(jsValue)
-            println("---")
-            val eventStreamBatch = jsValue.convertTo[EventStreamBatch]
-            println(eventStreamBatch)
-            println("---")
+            Try(rawEvent.parseJson.convertTo[EventStreamBatch]) match {
+              case Success(event) =>
+                log.debug(s"RAW EVENT: $event")
+                context.system.eventStream.publish(event)
+              case Failure(err) => log.error(err, "Issue decoding JSON")
+            }
             bout.reset()
           }
         }

@@ -19,7 +19,7 @@ trait NakadiClient {
     *               Helpful for operational troubleshooting and log analysis.
     * @return Option representing the error message or None in case of success
     */
-  def postEvent(name: String, event: String, flowId: Option[String] = None): Future[Boolean]
+  def postEvent(name: String, event: String, flowId: Option[String] = None): Future[Unit]
 
   /**
     * Blocking subscription to events of specified topic and partition.

@@ -25,7 +25,7 @@ class ReactiveNakadi {
   }
 
   def consumerActorProps(props: ConsumerProperties)(implicit actorSystem: ActorSystem) = {
-    val reactiveConsumer = ReactiveNakadiConsumer.apply(props, actorSystem)
+    val reactiveConsumer = ReactiveNakadiConsumer(props, actorSystem)
     NakadiActorPublisher.props(reactiveConsumer)
   }
 
