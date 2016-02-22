@@ -4,11 +4,14 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Source, Sink }
 import com.typesafe.config.ConfigFactory
+import de.zalando.react.nakadi.NakadiMessages.{StringConsumerMessage, ProducerMessage}
 
 /**
   * Created by adrakeford on 17/02/2016.
   */
 object TestApp extends App {
+
+  val token = "c43cd9bd-0561-4a55-82f7-48e1f564da12"
 
   val config = ConfigFactory.load()
 
@@ -16,17 +19,26 @@ object TestApp extends App {
   implicit val materializer = ActorMaterializer()
 
   val nakadi = new ReactiveNakadi()
+
   val publisher = nakadi.consume(ConsumerProperties(
-    //server = "192.168.99.100",
     server = "nakadi-sandbox.aruha-test.zalan.do",
-    //port = 8080,
     securedConnection = true,
-    tokenProvider = () => "ac516b4f-1338-43e6-a6c3-2e98ac8e065e",
+    tokenProvider = () => token,
     topic = "buffalo-test-topic",
     sslVerify = false
   ))
 
-  Source.fromPublisher(publisher)
-    .map(x => println(s"MAP $x"))
-    .to(Sink.foreach(x => println(s"END: $x")))
+  val subscriber = nakadi.publish(ProducerProperties(
+    server = "nakadi-sandbox.aruha-test.zalan.do",
+    securedConnection = true,
+    tokenProvider = () => token,
+    topic = "buffalo-test-topic-uppercase",
+    sslVerify = false
+  ))
+
+  Source
+    .fromPublisher(publisher)
+    .map(m => ProducerMessage(eventRecord = m.events.map(_.toUpperCase())))
+    .to(Sink.fromSubscriber(subscriber))
+    .run()
 }

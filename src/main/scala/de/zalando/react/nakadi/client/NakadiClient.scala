@@ -1,9 +1,7 @@
 package de.zalando.react.nakadi.client
 
 import akka.actor.{ActorRef, ActorSystem}
-import de.zalando.react.nakadi.ConsumerProperties
-
-import scala.concurrent.Future
+import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 
 
 trait NakadiClient {
@@ -13,13 +11,12 @@ trait NakadiClient {
     * The partition resolution strategy is defined per topic and is managed by event store (currently resolved from
     * hash over Event.orderingKey).
     *
-    * @param name this represents a topic
-    * @param event event to be posted
+    * @param events events to be posted
     * @param flowId The flow id of the request, which is written into the logs and passed to called services.
     *               Helpful for operational troubleshooting and log analysis.
     * @return Option representing the error message or None in case of success
     */
-  def postEvent(name: String, event: String, flowId: Option[String] = None): Future[Unit]
+  def publishEvent(events: Seq[String], flowId: Option[String] = None): Unit
 
   /**
     * Blocking subscription to events of specified topic and partition.
@@ -34,6 +31,10 @@ trait NakadiClient {
 object NakadiClient {
 
   def apply(consumerProperties: ConsumerProperties, actorSystem: ActorSystem): ActorRef = {
-    actorSystem.actorOf(NakadiClientImpl.props(consumerProperties), "nakadi-client")
+    actorSystem.actorOf(NakadiClientImpl.props(consumerProperties), "consumer-nakadi-client")
+  }
+
+  def apply(producerProperties: ProducerProperties, actorSystem: ActorSystem): ActorRef = {
+    actorSystem.actorOf(NakadiClientImpl.props(producerProperties), "producer-nakadi-client")
   }
 }

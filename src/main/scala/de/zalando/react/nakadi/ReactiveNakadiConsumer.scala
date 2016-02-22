@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import de.zalando.react.nakadi.client.NakadiClient
 
 
-class ReactiveNakadiConsumer(properties: ConsumerProperties, actorSystem: ActorSystem) {
+class ReactiveNakadiConsumer(val properties: ConsumerProperties, actorSystem: ActorSystem) {
 
   val nakadiClient = NakadiClient(properties, actorSystem)
 }

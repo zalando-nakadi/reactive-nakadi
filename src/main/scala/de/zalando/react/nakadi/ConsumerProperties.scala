@@ -7,16 +7,6 @@ import scala.concurrent.duration.FiniteDuration
 
 object ConsumerProperties {
 
-  /**
-    * Consumer Properties
-    *
-    * @param server The nakadi endpoint
-    * @param topic
-    * The high-level API hides the details of brokers from the consumer and allows consuming off the cluster of machines
-    * without concern for the underlying topology. It also maintains the state of what has been consumed. The high-level API
-    * also provides the ability to subscribe to topics that match a filter expression (i.e., either a whitelist or a blacklist
-    * regular expression).  This topic is a whitelist only but can change with re-factoring below on the filterSpec
-    */
   def apply(
     server: String,
     securedConnection: Boolean,
