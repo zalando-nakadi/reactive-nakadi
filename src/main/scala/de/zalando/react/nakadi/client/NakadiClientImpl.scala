@@ -1,7 +1,9 @@
 package de.zalando.react.nakadi.client
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{ActorRef, Actor, ActorLogging, Props}
 import akka.stream.scaladsl.ImplicitMaterializer
+
+import de.zalando.react.nakadi.client.providers.ConsumeStatus
 import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 import de.zalando.react.nakadi.client.providers.{ConsumeEvents, ProduceEvents, HttpProvider}
 
@@ -19,7 +21,6 @@ private[client] case class Properties(
 
 object NakadiClientImpl {
 
-  case object ListenForEvents
   case class EventRecord(events: Seq[String], flowId: Option[String] = None)
 
   def props(consumerProperties: ConsumerProperties) = {
@@ -56,26 +57,29 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with NakadiClient {
 
   // FIXME - Need general retry mechanism
-  val http = new HttpProvider(context,
-                              properties.server,
-                              properties.port,
-                              properties.securedConnection,
-                              properties.sslVerify).http
+  val outgoingConnection = new HttpProvider(
+    context,
+    properties.server,
+    properties.port,
+    properties.securedConnection,
+    properties.sslVerify).outgoingConnection
+
+  import NakadiClientImpl._
 
   override def receive: Receive = {
-    case NakadiClientImpl.ListenForEvents => listenForEvents()
-    case eventRecord: NakadiClientImpl.EventRecord => publishEvent(eventRecord.events, eventRecord.flowId)
+    case ConsumeStatus.Start => listenForEvents(sender())
+    case eventRecord: EventRecord => publishEvent(eventRecord.events, eventRecord.flowId)
   }
 
   override def publishEvent(events: Seq[String], flowId: Option[String]): Unit = {
     val p = properties.producerProperties.getOrElse(sys.error("Producer Properties cannon be None"))
-    val produceEvents = new ProduceEvents(p, http, log, context)
+    val produceEvents = new ProduceEvents(p, context, log, outgoingConnection)
     produceEvents.publish(events, flowId)
   }
 
-  override def listenForEvents(): Unit = {
+  override def listenForEvents(receiverActorRef: ActorRef): Unit = {
     val p = properties.consumerProperties.getOrElse(sys.error("Consumer Properties cannon be None"))
-    val consumeEvents = new ConsumeEvents(p, http, log, context)
-    consumeEvents.stream()
+    val consumeEvents = new ConsumeEvents(p, context, log, outgoingConnection)
+    consumeEvents.stream(receiverActorRef)
   }
 }

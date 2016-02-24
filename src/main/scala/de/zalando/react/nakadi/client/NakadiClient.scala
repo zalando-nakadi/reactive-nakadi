@@ -24,7 +24,7 @@ trait NakadiClient {
     *
     * @return Either error message or connection was closed and reconnect is set to false
     */
-  def listenForEvents(): Unit
+  def listenForEvents(receiverActorRef: ActorRef): Unit
 }
 
 

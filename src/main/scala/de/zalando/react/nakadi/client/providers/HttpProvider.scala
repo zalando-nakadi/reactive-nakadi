@@ -5,12 +5,17 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.{SSLContext, TrustManager, X509TrustManager}
 
 import akka.actor.ActorContext
+import akka.http.scaladsl.Http.OutgoingConnection
+import akka.http.scaladsl.model.{HttpResponse, HttpRequest}
 import akka.http.scaladsl.{Http, HttpsContext}
+import akka.stream.scaladsl.Flow
+
+import scala.concurrent.Future
 
 
 class HttpProvider(actorContext: ActorContext, server: String, port: Int, securedConnection: Boolean, sslVerify: Boolean) {
 
-  def http = {
+  def outgoingConnection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = {
     val h = Http(actorContext.system)
 
     securedConnection match {
@@ -27,11 +32,11 @@ class HttpProvider(actorContext: ActorContext, server: String, port: Int, secure
           ctx.init(Array.empty, Array(permissiveTrustManager), new SecureRandom())
           ctx
         }
-        h.outgoingConnectionTls(server.toString, port)
         h.setDefaultClientHttpsContext(HttpsContext(sslContext))
+        h.outgoingConnectionTls(host = server.toString, port = port, httpsContext = Option(HttpsContext(sslContext)))
       case false =>
         h.outgoingConnection(server.toString, port)
     }
-    h
   }
+
 }

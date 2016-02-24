@@ -27,11 +27,7 @@ class NakadiActorSubscriber(producerAndProps: ReactiveNakadiProducer, requestStr
   }
 
   private def processElement(message: StringProducerMessage) = {
-    println(s"processElement of the subscriber called with: $message")
-    client ! EventRecord(
-      events = message.eventRecord,
-      flowId = message.flowId
-    )
+    client ! EventRecord(events = message.eventRecord, flowId = message.flowId)
   }
 
   private def handleError(ex: Throwable) = {

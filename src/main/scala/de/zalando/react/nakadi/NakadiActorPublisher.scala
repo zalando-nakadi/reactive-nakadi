@@ -1,9 +1,9 @@
 package de.zalando.react.nakadi
 
+import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
-import akka.stream.actor.{ActorPublisherMessage, ActorPublisher}
 
-import de.zalando.react.nakadi.client.NakadiClientImpl
+import de.zalando.react.nakadi.client.providers.ConsumeStatus
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.NakadiMessages.StringConsumerMessage
 
@@ -19,33 +19,27 @@ object NakadiActorPublisher {
 class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends ActorPublisher[StringConsumerMessage]
   with ActorLogging {
 
+  import akka.stream.actor.ActorPublisherMessage._
+
   private val client: ActorRef = consumerAndProps.nakadiClient
 
-  override def preStart() {
-    context.system.eventStream.subscribe(self, classOf[EventStreamBatch])
-    client ! NakadiClientImpl.ListenForEvents
-  }
+  override def preStart() = client ! ConsumeStatus.Start
 
   override def receive: Receive = {
-    case rawEvent: EventStreamBatch                         => handleIncoming(rawEvent)
-    case ActorPublisherMessage.SubscriptionTimeoutExceeded  => stop()
-    case ActorPublisherMessage.Cancel                       => stop()
+
+    case ConsumeStatus.Init => sender() ! ConsumeStatus.Acknowledge
+    case rawEvent: EventStreamBatch if totalDemand > 0 =>
+      onNext(toMessage(rawEvent))
+      sender() ! ConsumeStatus.Acknowledge
+    case SubscriptionTimeoutExceeded  => stop()
+    case Cancel                       => stop()
   }
 
-  private def handleIncoming(rawEvent: EventStreamBatch) = {
-    if (isActive && totalDemand > 0) {
-      val cursor: Option[NakadiMessages.Cursor] = rawEvent.cursor.map(c => NakadiMessages.Cursor(partition = c.partition, offset = c.offset))
-      val consumerMessage = NakadiMessages.ConsumerMessage(cursor = cursor, events = rawEvent.events.getOrElse(Nil))
-      onNext(consumerMessage)
-    }
+  private def toMessage(rawEvent: EventStreamBatch) = {
+    val cursor: Option[NakadiMessages.Cursor] = rawEvent.cursor.map(c => NakadiMessages.Cursor(partition = c.partition, offset = c.offset))
+    NakadiMessages.ConsumerMessage(cursor = cursor, events = rawEvent.events.getOrElse(Nil))
   }
 
-  override def postStop() = {
-    context.system.eventStream.unsubscribe(self)
-  }
-
-  def stop() = {
-    context.stop(self)
-  }
+  def stop() = context.stop(self)
 
 }
