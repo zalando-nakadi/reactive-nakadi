@@ -1,7 +1,5 @@
 package de.zalando.react.nakadi
 
-import NakadiMessages._
-
 
 object ProducerProperties {
 

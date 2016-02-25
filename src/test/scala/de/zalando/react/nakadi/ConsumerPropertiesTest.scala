@@ -98,6 +98,23 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.sslVerify should === (true)
   }
 
+  it should "also be able to handle secure connection setting" in {
+    val props = ConsumerProperties(
+      server = server,
+      securedConnection = true,
+      tokenProvider = () => token,
+      topic = topic
+    )
+
+    props.server should === (server)
+    props.port should === (443)
+    props.securedConnection should === (true)
+    props.tokenProvider.apply should === (token)
+    props.topic should === (topic)
+    props.sslVerify should === (true)
+    props.urlSchema should === ("https://")
+  }
+
   it should "also should throw exception if invalid url schema passed in" in {
     val props = ConsumerProperties(
       server = server,
