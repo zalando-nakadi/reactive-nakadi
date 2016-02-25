@@ -5,8 +5,9 @@
 ## TODO
 There is still a lot of work to be done on this, but some of the high level outstanding tasks include:
 - Configurable connection retries to Nakadi
-- Persistance of consumer Cursor. Nakadi plans to support consumer commits in later high level API versions
+- Persistence of consumer Cursor. Nakadi plans to support consumer commits in later high level API versions
 - Unit / integration tests
+- Some documentation
 
 
 ## Example Usage

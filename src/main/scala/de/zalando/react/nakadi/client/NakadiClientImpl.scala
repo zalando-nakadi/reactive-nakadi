@@ -12,9 +12,9 @@ private[client] case class Properties(
   server: String,
   securedConnection: Boolean,
   tokenProvider: () => String,
-  port: Int = 80,
-  sslVerify: Boolean = true,
-  urlSchema: String = "https://",
+  port: Int,
+  sslVerify: Boolean,
+  urlSchema: String,
   consumerProperties: Option[ConsumerProperties] = None,
   producerProperties: Option[ProducerProperties] = None
 )

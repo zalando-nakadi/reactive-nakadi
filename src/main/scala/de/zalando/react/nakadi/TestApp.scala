@@ -7,9 +7,7 @@ import com.typesafe.config.ConfigFactory
 import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
 import org.reactivestreams.{Publisher, Subscriber}
 
-/**
-  * Created by adrakeford on 17/02/2016.
-  */
+
 object TestApp extends App {
 
   val token = "a7dffef5-8e65-4e00-b130-786036c5e679"
