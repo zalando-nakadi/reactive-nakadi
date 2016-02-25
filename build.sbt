@@ -13,7 +13,6 @@ libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
   "org.scalaz" %% "scalaz-core" % "7.1.6",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-  "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-experimental" % akkaExperimentalVersion,
   "com.typesafe.akka" %% "akka-stream-experimental" % akkaExperimentalVersion,
   "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaExperimentalVersion,

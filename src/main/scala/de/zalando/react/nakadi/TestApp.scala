@@ -4,14 +4,15 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Source, Sink }
 import com.typesafe.config.ConfigFactory
-import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
+import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
+import org.reactivestreams.{Publisher, Subscriber}
 
 /**
   * Created by adrakeford on 17/02/2016.
   */
 object TestApp extends App {
 
-  val token = "95cc325e-965b-4995-aa2a-2deb00842446"
+  val token = "a7dffef5-8e65-4e00-b130-786036c5e679"
 
   val config = ConfigFactory.load()
 
@@ -20,7 +21,7 @@ object TestApp extends App {
 
   val nakadi = new ReactiveNakadi()
 
-  val publisher = nakadi.consume(ConsumerProperties(
+  val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
     server = "nakadi-sandbox.aruha-test.zalan.do",
     securedConnection = true,
     tokenProvider = () => token,
@@ -29,7 +30,7 @@ object TestApp extends App {
     port = 443
   ))
 
-  val subscriber = nakadi.publish(ProducerProperties(
+  val subscriber: Subscriber[ProducerMessage] = nakadi.publish(ProducerProperties(
     server = "nakadi-sandbox.aruha-test.zalan.do",
     securedConnection = true,
     tokenProvider = () => token,
