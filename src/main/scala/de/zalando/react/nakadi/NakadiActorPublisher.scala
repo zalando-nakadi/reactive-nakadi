@@ -3,8 +3,8 @@ package de.zalando.react.nakadi
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
 
-import de.zalando.react.nakadi.client.providers.ConsumeStatus
 import de.zalando.react.nakadi.client.models.EventStreamBatch
+import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.NakadiMessages.StringConsumerMessage
 
 
@@ -23,14 +23,14 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
 
   private val client: ActorRef = consumerAndProps.nakadiClient
 
-  override def preStart() = client ! ConsumeStatus.Start
+  override def preStart() = client ! ConsumeCommand.Start
 
   override def receive: Receive = {
 
-    case ConsumeStatus.Init => sender() ! ConsumeStatus.Acknowledge
+    case ConsumeCommand.Init => sender() ! ConsumeCommand.Acknowledge
     case rawEvent: EventStreamBatch if totalDemand > 0 =>
       onNext(toMessage(rawEvent))
-      sender() ! ConsumeStatus.Acknowledge
+      sender() ! ConsumeCommand.Acknowledge
     case SubscriptionTimeoutExceeded  => stop()
     case Cancel                       => stop()
   }

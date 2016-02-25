@@ -15,15 +15,15 @@ import akka.event.LoggingAdapter
 import akka.stream._
 
 import de.zalando.react.nakadi.client._
-import de.zalando.react.nakadi.{NakadiActorPublisher, ProducerProperties, ConsumerProperties}
 import de.zalando.react.nakadi.client.models.EventStreamBatch
+import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 
-object ConsumeStatus {
+object ConsumeCommand {
   case object Start
   case object Init
   case object Acknowledge
@@ -38,7 +38,6 @@ class ConsumeEvents(properties: ConsumerProperties,
 
   import actorContext.dispatcher
 
-  val DefaultBufferSize = 1024
   val DefaultParallelism = 100
 
   def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Unit = {
@@ -63,10 +62,10 @@ class ConsumeEvents(properties: ConsumerProperties,
       .via(outgoingConnection)
       .runWith(Sink.foreachParallel(DefaultParallelism) {
         case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
-          import ConsumeStatus._
+          import ConsumeCommand._
           entity
             .dataBytes
-            .via(Flow[ByteString].map(parseJson).buffer(DefaultBufferSize, OverflowStrategy.backpressure))
+            .via(Flow[ByteString].map(parseJson))
             .runWith(Sink.actorRefWithAck(receiverActorRef, Init, Acknowledge, Complete))
         case HttpResponse(code, _, _, _) =>
           log.info(s"Request failed, response code: $code")

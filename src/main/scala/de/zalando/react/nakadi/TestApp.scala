@@ -11,7 +11,7 @@ import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
   */
 object TestApp extends App {
 
-  val token = "a042e491-2c4f-469f-9f83-baf0f88e9232"
+  val token = "95cc325e-965b-4995-aa2a-2deb00842446"
 
   val config = ConfigFactory.load()
 
@@ -48,7 +48,7 @@ object TestApp extends App {
     .fromPublisher(publisher)
     .map { m =>
       println(s"From publisher: $m")
-      //Thread sleep 1000
+      Thread sleep 1000
     }
     .to(Sink.ignore)
     .run()

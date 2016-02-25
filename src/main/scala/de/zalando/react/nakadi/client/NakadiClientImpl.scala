@@ -3,7 +3,7 @@ package de.zalando.react.nakadi.client
 import akka.actor.{ActorRef, Actor, ActorLogging, Props}
 import akka.stream.scaladsl.ImplicitMaterializer
 
-import de.zalando.react.nakadi.client.providers.ConsumeStatus
+import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 import de.zalando.react.nakadi.client.providers.{ConsumeEvents, ProduceEvents, HttpProvider}
 
@@ -67,7 +67,7 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   import NakadiClientImpl._
 
   override def receive: Receive = {
-    case ConsumeStatus.Start => listenForEvents(sender())
+    case ConsumeCommand.Start => listenForEvents(sender())
     case eventRecord: EventRecord => publishEvent(eventRecord.events, eventRecord.flowId)
   }
 
