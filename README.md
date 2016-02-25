@@ -1,5 +1,7 @@
 # Reactive Streams for Nakadi
 
+[![Build Status](https://travis-ci.org/zalando/reactive-nakadi.svg?branch=master)](https://travis-ci.org/zalando/reactive-nakadi)
+
 [Reactive Streams](http://www.reactive-streams.org) wrapper for [Nakadi](https://github.com/zalando/nakadi) is enspired by [Reactive Kafka](https://github.com/softwaremill/reactive-kafka). Reactive-Nakadi is built using Akka, Akka Http and Akka Streams while communicating with Nakadi's low level API.
 
 ## TODO
