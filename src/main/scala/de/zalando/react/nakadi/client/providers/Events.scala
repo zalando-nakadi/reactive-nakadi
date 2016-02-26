@@ -7,19 +7,21 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.MediaTypes._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
+
+import akka.stream._
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 
 import akka.util.ByteString
-import akka.actor.{ActorRef, ActorContext}
 import akka.event.LoggingAdapter
-import akka.stream._
+import akka.actor.{ActorRef, ActorContext}
 
 import de.zalando.react.nakadi.client._
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 
-import scala.annotation.tailrec
 import scala.concurrent.Future
+import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 
@@ -36,11 +38,11 @@ class ConsumeEvents(properties: ConsumerProperties,
                     log: LoggingAdapter,
                     outgoingConnection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]]) {
 
-  import actorContext.dispatcher
-
-  val DefaultParallelism = 100
+  val DefaultBufferSize = 1000
 
   def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Unit = {
+    import ConsumeCommand._
+
     val streamEventUri = URI_STREAM_EVENTS.format(
       properties.topic,
       properties.batchLimit,
@@ -57,22 +59,31 @@ class ConsumeEvents(properties: ConsumerProperties,
         headers.Accept(MediaRange(`application/json`))
       )
 
+    val parse = Flow[ByteString].map(parseJson)
+    val buff = Flow[EventStreamBatch].buffer(DefaultBufferSize, OverflowStrategy.backpressure)
+    val logger = Flow[EventStreamBatch].log("event")
+    val out = Sink.actorRefWithAck(receiverActorRef, Init, Acknowledge, Complete)
+
+    val consumer = Flow[HttpResponse].map {
+      case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
+        RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
+          import GraphDSL.Implicits._
+          val in = entity.dataBytes
+
+          in ~> parse ~> buff ~> logger ~> out
+
+          ClosedShape
+        }).run()
+      case HttpResponse(code, _, _, _) =>
+        log.warning(s"Request failed, response code: $code")
+    }
+
     Source
       .single(request)
       .via(outgoingConnection)
-      .runWith(Sink.foreachParallel(DefaultParallelism) {
-        case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
-          import ConsumeCommand._
-          entity
-            .dataBytes
-            .via(Flow[ByteString].map(parseJson))
-            .runWith(Sink.actorRefWithAck(receiverActorRef, Init, Acknowledge, Complete))
-        case HttpResponse(code, _, _, _) =>
-          log.info(s"Request failed, response code: $code")
-      }).map(_ => log.info("connection closed to [topic={}]", properties.topic)).recover {
-        case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
-        case ex => log.error(ex, "Error connecting to Nakadi")
-      }
+      .via(consumer)
+      .to(Sink.ignore)
+      .run()
   }
 
   private def parseJson(byteString: ByteString) = {
@@ -109,7 +120,9 @@ class ConsumeEvents(properties: ConsumerProperties,
 
     Try(recur(byteString).parseJson.convertTo[EventStreamBatch]) match {
       case Success(event) => event
-      case Failure(err) => log.error(err, "Issue decoding JSON")
+      case Failure(err) =>
+        log.error(err, "Issue decoding JSON")
+        EventStreamBatch()
     }
   }
 }
@@ -135,7 +148,7 @@ class ProduceEvents(properties: ProducerProperties,
       Source
         .single(request)
         .via(outgoingConnection)
-        .runWith(Sink.foreachParallel(100) {
+        .runWith(Sink.foreach {
           case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
             val body = entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.utf8String)
             log.debug(s"Got response, body: $body")

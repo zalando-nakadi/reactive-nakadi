@@ -28,9 +28,12 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   override def receive: Receive = {
 
     case ConsumeCommand.Init => sender() ! ConsumeCommand.Acknowledge
-    case rawEvent: EventStreamBatch if totalDemand > 0 =>
-      onNext(toMessage(rawEvent))
-      sender() ! ConsumeCommand.Acknowledge
+    case rawEvent: EventStreamBatch =>
+      if (isActive && totalDemand > 0) {
+        val message = toMessage(rawEvent)
+        if (message.events.nonEmpty) onNext(message)
+        sender() ! ConsumeCommand.Acknowledge
+      }
     case SubscriptionTimeoutExceeded  => stop()
     case Cancel                       => stop()
   }
