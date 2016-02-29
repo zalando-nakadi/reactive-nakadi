@@ -7,7 +7,7 @@ import javax.net.ssl.{SSLContext, TrustManager, X509TrustManager}
 import akka.actor.ActorContext
 import akka.http.scaladsl.Http.OutgoingConnection
 import akka.http.scaladsl.model.{HttpResponse, HttpRequest}
-import akka.http.scaladsl.{Http, HttpsContext}
+import akka.http.scaladsl.{HttpsConnectionContext, Http}
 import akka.stream.scaladsl.Flow
 
 import scala.concurrent.Future
@@ -32,8 +32,7 @@ class HttpProvider(actorContext: ActorContext, server: String, port: Int, secure
           ctx.init(Array.empty, Array(permissiveTrustManager), new SecureRandom())
           ctx
         }
-        h.setDefaultClientHttpsContext(HttpsContext(sslContext))
-        h.outgoingConnectionTls(host = server.toString, port = port, httpsContext = Option(HttpsContext(sslContext)))
+        h.outgoingConnectionHttps(server, port, new HttpsConnectionContext(sslContext))
       case false =>
         h.outgoingConnection(server.toString, port)
     }

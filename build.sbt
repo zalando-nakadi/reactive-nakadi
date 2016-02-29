@@ -13,12 +13,12 @@ resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-experimental" % akkaExperimentalVersion,
-  "com.typesafe.akka" %% "akka-stream-experimental" % akkaExperimentalVersion,
-  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaExperimentalVersion,
+  "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test",
-  "com.typesafe.akka" %% "akka-stream-testkit-experimental" % akkaExperimentalVersion % "test"
+  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test"
 )
 
 mainClass in assembly := Some("de.zalando.react.nakadi.TestApp")

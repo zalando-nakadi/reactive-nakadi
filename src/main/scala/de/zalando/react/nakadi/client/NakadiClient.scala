@@ -15,10 +15,10 @@ trait NakadiClient {
 object NakadiClient {
 
   def apply(consumerProperties: ConsumerProperties, actorSystem: ActorSystem): ActorRef = {
-    actorSystem.actorOf(NakadiClientImpl.props(consumerProperties), "consumer-nakadi-client")
+    actorSystem.actorOf(NakadiClientImpl.props(consumerProperties))
   }
 
   def apply(producerProperties: ProducerProperties, actorSystem: ActorSystem): ActorRef = {
-    actorSystem.actorOf(NakadiClientImpl.props(producerProperties), "producer-nakadi-client")
+    actorSystem.actorOf(NakadiClientImpl.props(producerProperties))
   }
 }

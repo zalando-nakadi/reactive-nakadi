@@ -61,8 +61,14 @@ class ConsumeEvents(properties: ConsumerProperties,
 
     val parse = Flow[ByteString].map(parseJson)
     val buff = Flow[EventStreamBatch].buffer(DefaultBufferSize, OverflowStrategy.backpressure)
-    val logger = Flow[EventStreamBatch].log("event")
-    val out = Sink.actorRefWithAck(receiverActorRef, Init, Acknowledge, Complete)
+    val logger = Flow[EventStreamBatch].log("nakadi-event-stream")
+    val out = Sink.actorRefWithAck(
+      ref = receiverActorRef,
+      onInitMessage = Init,
+      ackMessage = Acknowledge,
+      onCompleteMessage = Complete,
+      onFailureMessage = x => x
+    )
 
     val consumer = Flow[HttpResponse].map {
       case HttpResponse(status, headers, entity, _) if status.isSuccess() =>

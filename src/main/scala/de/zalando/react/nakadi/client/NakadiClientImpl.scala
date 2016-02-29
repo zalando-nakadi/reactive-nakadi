@@ -1,7 +1,7 @@
 package de.zalando.react.nakadi.client
 
 import akka.actor.{ActorRef, Actor, ActorLogging, Props}
-import akka.stream.scaladsl.ImplicitMaterializer
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
@@ -52,9 +52,10 @@ object NakadiClientImpl {
 
 
 class NakadiClientImpl(val properties: Properties) extends Actor
-  with ImplicitMaterializer
   with ActorLogging
   with NakadiClient {
+
+  final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
 
   // FIXME - Need general retry mechanism
   val outgoingConnection = new HttpProvider(

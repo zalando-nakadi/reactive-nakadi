@@ -12,9 +12,6 @@ There is still a lot of work to be done on this, but some of the high level outs
 - Unit / integration tests
 - Some documentation
 
-## Note
-There is a bug with Akka Streams that causes `Sink.actorRefWithAck` to get stuck when buffer runs full. There is an issue opened [here](https://github.com/akka/akka/issues/19653), currently the fix is merged with master. Just waiting on next streams release (version 2.0.4 I think).
-
 
 ## Example Usage
 
