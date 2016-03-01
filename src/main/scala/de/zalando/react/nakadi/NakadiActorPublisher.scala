@@ -33,11 +33,16 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
 
   override def receive: Receive = {
 
-    case ConsumeCommand.Init                      => sender() ! ConsumeCommand.Acknowledge; streamSupervisor = Option(sender())
+    case ConsumeCommand.Init                      => registerSupervisor(sender())
     case rawEvent: EventStreamBatch if isActive   => readDemandedItems(rawEvent)
     case Request(_)                               => deliverBuf()
     case SubscriptionTimeoutExceeded              => stop()
     case Cancel                                   => stop()
+  }
+
+  private def registerSupervisor(ref: ActorRef) = {
+    ref ! ConsumeCommand.Acknowledge
+    streamSupervisor = Option(ref)
   }
 
   private def readDemandedItems(rawEvent: EventStreamBatch) = {
@@ -62,9 +67,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   @tailrec
   final def deliverBuf(): Unit = {
     if (totalDemand > 0) {
-      if (buf.isEmpty && streamSupervisor.isDefined) {
-        streamSupervisor.get ! ConsumeCommand.Acknowledge
-      }
+      if (buf.isEmpty) streamSupervisor.foreach(_ ! ConsumeCommand.Acknowledge)
       /*
        * totalDemand is a Long and could be larger than
        * what buf.splitAt can accept

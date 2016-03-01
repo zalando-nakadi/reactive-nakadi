@@ -40,8 +40,9 @@ class ConsumeEvents(properties: ConsumerProperties,
 
   val DefaultBufferSize = 1000
 
-  def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Unit = {
+  def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Future[Unit] = {
     import ConsumeCommand._
+    import actorContext.dispatcher
 
     val streamEventUri = URI_STREAM_EVENTS.format(
       properties.topic,
@@ -88,8 +89,12 @@ class ConsumeEvents(properties: ConsumerProperties,
       .single(request)
       .via(outgoingConnection)
       .via(consumer)
-      .to(Sink.ignore)
-      .run()
+      .runWith(Sink.ignore)
+      .map(_ => ())
+      .recover {
+        case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
+        case ex => log.error(ex, "Error connecting to Nakadi")
+      }
   }
 
   private def parseJson(byteString: ByteString) = {
