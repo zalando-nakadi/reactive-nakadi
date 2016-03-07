@@ -1,9 +1,11 @@
 package de.zalando.react.nakadi
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.actor.{ActorSubscriber, RequestStrategy, WatermarkRequestStrategy, ActorPublisher}
-import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
 import org.reactivestreams.{Publisher, Subscriber}
+
+import akka.actor.{PoisonPill, ActorRef, ActorSystem}
+import akka.stream.actor.{ActorSubscriber, RequestStrategy, WatermarkRequestStrategy, ActorPublisher}
+
+import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
 
 
 class ReactiveNakadi {
@@ -71,6 +73,19 @@ class ReactiveNakadi {
     NakadiActorSubscriber.props(producer, requestStrategy)
   }
 
+  def consumeWithOffsetSink(props: ConsumerProperties, dispatcher: String)(implicit actorSystem: ActorSystem): PublisherWithCommitSink = {
+    val conActor: ActorRef = consumerActor(props, dispatcher)
+    PublisherWithCommitSink(
+      ActorPublisher[ConsumerMessage](conActor),
+      conActor,
+      CommitSink.create(conActor, props, dispatcher)
+    )
+  }
+
+  def consumeWithOffsetSink(props: ConsumerProperties)(implicit actorSystem: ActorSystem): PublisherWithCommitSink = {
+    consumeWithOffsetSink(props, ReactiveNakadi.ConsumerDefaultDispatcher)
+  }
+
 }
 
 object ReactiveNakadi {
@@ -78,3 +93,17 @@ object ReactiveNakadi {
   val ConsumerDefaultDispatcher = "nakadi-publisher-dispatcher"
   val ProducerDefaultDispatcher = "nakadi-subscriber-dispatcher"
 }
+
+case class PublisherWithCommitSink(
+  publisher: Publisher[ConsumerMessage],
+  publisherActor: ActorRef,
+  kafkaOffsetCommitSink: NakadiSink[ConsumerMessage]
+                                        ) {
+  def offsetCommitSink = kafkaOffsetCommitSink.sink
+
+  def cancel(): Unit = {
+    publisherActor ! NakadiActorPublisher.Stop
+    kafkaOffsetCommitSink.underlyingCommitterActor ! PoisonPill
+  }
+}
+

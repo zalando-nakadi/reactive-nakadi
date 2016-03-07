@@ -1,5 +1,7 @@
 package de.zalando.react.nakadi
 
+import de.zalando.react.nakadi.commit.handlers.BaseHandler
+
 import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -38,7 +40,8 @@ case class ConsumerProperties(
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
   sslVerify: Boolean = true,
-  urlSchema: String = "https://"
+  urlSchema: String = "https://",
+  commitHandler: Option[BaseHandler] = None
 ) {
 
   /**
