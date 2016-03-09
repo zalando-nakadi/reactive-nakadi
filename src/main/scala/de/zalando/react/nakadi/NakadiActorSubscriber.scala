@@ -31,7 +31,7 @@ class NakadiActorSubscriber(producerAndProps: ReactiveNakadiProducer, requestStr
   }
 
   private def handleError(ex: Throwable) = {
-    log.error(ex, "Stopping Kafka subscriber due to fatal error.")
+    log.error(ex, "Stopping Nakadi subscriber due to fatal error.")
     stop()
   }
 

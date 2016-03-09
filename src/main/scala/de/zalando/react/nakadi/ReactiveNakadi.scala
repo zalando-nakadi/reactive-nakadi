@@ -98,13 +98,13 @@ object ReactiveNakadi {
 case class PublisherWithCommitSink(
   publisher: Publisher[ConsumerMessage],
   publisherActor: ActorRef,
-  kafkaOffsetCommitSink: NakadiSink[ConsumerMessage]) {
+  nakadiOffsetCommitSink: NakadiSink[ConsumerMessage]) {
 
-  def offsetCommitSink = kafkaOffsetCommitSink.sink
+  def offsetCommitSink = nakadiOffsetCommitSink.sink
 
   def cancel(): Unit = {
     publisherActor ! NakadiActorPublisher.Stop
-    kafkaOffsetCommitSink.underlyingCommitterActor ! PoisonPill
+    nakadiOffsetCommitSink.underlyingCommitterActor ! PoisonPill
   }
 }
 
