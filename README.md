@@ -89,12 +89,13 @@ object Example extends App {
 
   val nakadi = new ReactiveNakadi()
 
-  val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
+  val publisher: PublisherWithCommitSink = nakadi.consume(ConsumerProperties(
     server = "some-nakadi-server",
     securedConnection = true,
     tokenProvider = () => token,
     topic = "test-topic",
     sslVerify = false,
+    commitHandler = Some(new MemoryCommitHandler),
     port = 443
   ))
 
