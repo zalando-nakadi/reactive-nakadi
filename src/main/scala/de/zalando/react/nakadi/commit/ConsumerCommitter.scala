@@ -66,9 +66,9 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
   }
 
   def registerCommit(msg: ConsumerMessage): Unit = {
-    // FIXME - Create topic partition class that creates hash based off a topic and partition
     log.debug(s"Received commit request for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}")
-    val last = partitionOffsetMap.lastOffset(msg.cursor.partition)
+    val topicPartition = TopicPartition(msg.topic.toString, msg.cursor.partition.toInt)
+    val last = partitionOffsetMap.lastOffset(topicPartition)
     updateOffsetIfLarger(msg, last)
   }
 
@@ -76,7 +76,8 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
     val msgOffset = OffsetMap.offsetFromString(msg.cursor.offset.toString)
     if (msgOffset > last) {
       log.debug(s"Registering commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered = $last")
-      partitionOffsetMap = partitionOffsetMap.plusOffset(msg.cursor.partition, msgOffset)
+      val topicPartition = TopicPartition(msg.topic.toString, msg.cursor.partition.toInt)
+      partitionOffsetMap = partitionOffsetMap.plusOffset(topicPartition, msgOffset)
       scheduleFlush()
     } else {
       log.debug(s"Skipping commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered is $last")

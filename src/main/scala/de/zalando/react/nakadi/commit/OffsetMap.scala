@@ -6,18 +6,18 @@ import de.zalando.react.nakadi.NakadiMessages.Cursor
 
 case class OffsetMap(var map: Offsets = Map.empty) {
 
-  def lastOffset(partition: Partition) = map.getOrElse(partition, -1L)
+  def lastOffset(topicPartition: TopicPartition) = map.getOrElse(topicPartition, -1L)
 
   def diff(other: OffsetMap) = {
     OffsetMap((map.toSet diff other.map.toSet).toMap)
   }
 
-  def plusOffset(partition: Partition, offset: Offset) = {
-    this.copy(map = map + (partition -> offset))
+  def plusOffset(topicPartition: TopicPartition, offset: Offset) = {
+    this.copy(map = map + (topicPartition -> offset))
   }
 
-  def updateWithOffset(partition: Partition, offset: Offset) = {
-    map = map + (partition -> offset)
+  def updateWithOffset(topicPartition: TopicPartition, offset: Offset) = {
+    map = map + (topicPartition -> offset)
   }
 
   def nonEmpty = map.nonEmpty
@@ -26,7 +26,7 @@ case class OffsetMap(var map: Offsets = Map.empty) {
 
     map.map { values =>
       NakadiMessages.Cursor(
-        partition = values._1.toString,
+        partition = values._1.partition.toString,
         offset = values._2.toString
       )
     }.toSeq

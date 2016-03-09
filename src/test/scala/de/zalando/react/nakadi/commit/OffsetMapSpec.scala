@@ -6,27 +6,33 @@ import org.scalatest.{Matchers, FlatSpec}
 class OffsetMapSpec extends FlatSpec with Matchers {
 
   "OffsetMap" should "return an offset given a partitoin" in {
-    val offset = OffsetMap(Map("1" -> 10, "2" -> 0))
-    offset.lastOffset("1") should === (10)
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    val topicPartition2 = TopicPartition("my-topic", 10)
+    val offset = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 0))
+    offset.lastOffset(topicPartition1) should === (10)
   }
 
   it should "return -1 if partition not found" in {
-    val offset = OffsetMap(Map("1" -> 10, "2" -> 0))
-    offset.lastOffset("3") should === (-1L)
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    val topicPartition2 = TopicPartition("my-topic", 10)
+    val offset = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 0))
+    offset.lastOffset(TopicPartition("non-exist", 20)) should === (-1L)
   }
 
   it should "return a difference of two offsets" in {
-    var offset1 = OffsetMap(Map("1" -> 10))
-    var offset2 = OffsetMap(Map("2" -> 12))
-    offset1 diff offset2 should === (OffsetMap(Map("1" -> 10)))
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    val topicPartition2 = TopicPartition("my-topic", 10)
+    var offset1 = OffsetMap(Map(topicPartition1 -> 10))
+    var offset2 = OffsetMap(Map(topicPartition2 -> 12))
+    offset1 diff offset2 should === (OffsetMap(Map(topicPartition1 -> 10)))
 
-    offset1 = OffsetMap(Map("1" -> 10, "2" -> 2))
-    offset2 = OffsetMap(Map("2" -> 12))
-    offset1 diff offset2 should === (OffsetMap(Map("1" -> 10, "2" -> 2)))
+    offset1 = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 2))
+    offset2 = OffsetMap(Map(topicPartition2 -> 12))
+    offset1 diff offset2 should === (OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 2)))
 
-    offset1 = OffsetMap(Map("2" -> 12))
-    offset2 = OffsetMap(Map("1" -> 10, "2" -> 2))
-    offset1 diff offset2 should === (OffsetMap(Map("2" -> 12)))
+    offset1 = OffsetMap(Map(topicPartition2 -> 12))
+    offset2 = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 2))
+    offset1 diff offset2 should === (OffsetMap(Map(topicPartition2 -> 12)))
   }
 
   it should "return empty offset map if both empty" in {
@@ -34,26 +40,32 @@ class OffsetMapSpec extends FlatSpec with Matchers {
   }
 
   it should "be able to add a new offset and return a new instance" in {
-    val offset = OffsetMap(Map("1" -> 10))
-    offset.plusOffset("2", 20) should === (OffsetMap(Map("1" -> 10, "2" -> 20)))
-    offset.plusOffset("2", 30) should === (OffsetMap(Map("1" -> 10, "2" -> 30)))
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    val topicPartition2 = TopicPartition("my-topic", 10)
+    val offset = OffsetMap(Map(topicPartition1 -> 10))
+    offset.plusOffset(topicPartition2, 20) should === (OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 20)))
+    offset.plusOffset(topicPartition2, 30) should === (OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 30)))
   }
 
   it should "be able to update an existing offset" in {
-    val offset = OffsetMap(Map("1" -> 10))
-    offset.updateWithOffset("1", 20)
-    offset should === (OffsetMap(Map("1" -> 20)))
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    val offset = OffsetMap(Map(topicPartition1 -> 10))
+    offset.updateWithOffset(topicPartition1, 20)
+    offset should === (OffsetMap(Map(topicPartition1 -> 20)))
   }
 
   it should "correctly identify nonEmpty" in {
-    OffsetMap(Map("1" -> 10)).nonEmpty should === (true)
+    val topicPartition1 = TopicPartition("my-topic", 15)
+    OffsetMap(Map(topicPartition1 -> 10)).nonEmpty should === (true)
   }
 
   it should "be able to convert toCommitRequestInfo" in {
     import de.zalando.react.nakadi.NakadiMessages.Cursor
 
-    val offset = OffsetMap(Map("1" -> 10, "2" -> 20))
-    val expected = Seq(Cursor(partition = "1", offset = "10"), Cursor(partition = "2", offset = "20"))
+    val topicPartition1 = TopicPartition("my-topic", 60)
+    val topicPartition2 = TopicPartition("my-topic", 50)
+    val offset = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 20))
+    val expected = Seq(Cursor(partition = "60", offset = "10"), Cursor(partition = "50", offset = "20"))
     offset.toCommitRequestInfo should === (expected)
   }
 

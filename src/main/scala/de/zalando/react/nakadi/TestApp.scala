@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 object TestApp extends App {
 
-  val token = "e05479fb-e71c-4801-a07f-ab8b2e6ea938"
+  val token = "e8aece9f-1b91-499c-973f-3a14e2261596"
 
   val config = ConfigFactory.load()
 

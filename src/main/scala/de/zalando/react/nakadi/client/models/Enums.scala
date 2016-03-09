@@ -12,7 +12,7 @@ object OffsetSymbolicValue {
 
   def apply(name: String): OffsetSymbolicValueEnum = name.toUpperCase match {
     case Begin.name => Begin
-    case _ => sys.error(s"Unknown value '$name' for 'attribute-type' enum")
+    case _ => sys.error(s"Unknown value '$name' for 'OffsetSymbolicValueEnum' enum")
   }
 }
 
