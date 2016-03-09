@@ -65,6 +65,47 @@ object Example extends App {
 }
 ```
 
+#### Manual Commit
+
+In order to be able to achieve "at-least-once" delivery, you can use following API to obtain an additional Sink, where you can stream back messages that you processed. An underlying actor will periodically flush offsets of these messages as committed. **Note: This is commited into memory for now (testing phase). Later work will be done to extend this to use DynamoDB and/or ZooKeeper**
+
+```scala
+import akka.actor.ActorSystem
+import akka.stream.scaladsl.Source
+import akka.stream.ActorMaterializer
+
+import com.typesafe.config.ConfigFactory
+import de.zalando.react.nakadi.NakadiMessages.ConsumerMessage
+import de.zalando.react.nakadi.commit.handlers.MemoryCommitHandler
+
+object Example extends App {
+
+  val token = "<some-token>"
+
+  val config = ConfigFactory.load()
+
+  implicit val system = ActorSystem("reactive-nakadi")
+  implicit val materializer = ActorMaterializer()
+
+  val nakadi = new ReactiveNakadi()
+
+  val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
+    server = "some-nakadi-server",
+    securedConnection = true,
+    tokenProvider = () => token,
+    topic = "test-topic",
+    sslVerify = false,
+    port = 443
+  ))
+
+  Source
+    .fromPublisher(publisher.publisher)
+    .map(processMessage)
+    .to(publisher.offsetCommitSink)
+    .run()
+}
+```
+
 ## Tuning
 
 NakadiActorSubscriber and NakadiActorPublisher have their own thread pools, configured in `application.conf`.
