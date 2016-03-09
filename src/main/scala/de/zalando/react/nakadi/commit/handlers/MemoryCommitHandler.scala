@@ -1,14 +1,14 @@
 package de.zalando.react.nakadi.commit.handlers
 
-import de.zalando.react.nakadi.commit.Offsets
+import de.zalando.react.nakadi.NakadiMessages.Cursor
 
 
 class MemoryCommitHandler extends BaseHandler {
 
-  val store = scala.collection.concurrent.TrieMap.empty[String, Long]
+  val store = scala.collection.concurrent.TrieMap.empty[String, String]
 
-  override def commitSync(offsets: Offsets): Unit = {
-    offsets.foreach(v => store.put(v._1, v._2))
-    println(s"Offsets: $store")
+  override def commitSync(cursors: Seq[Cursor]): Unit = {
+    cursors.foreach(cursor => store.put(cursor.partition, cursor.offset))
+    println(s"committed offsets: $store")
   }
 }

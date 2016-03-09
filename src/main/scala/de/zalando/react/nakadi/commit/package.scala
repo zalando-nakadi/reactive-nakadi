@@ -2,5 +2,7 @@ package de.zalando.react.nakadi
 
 
 package object commit {
-  type Offsets = Map[String, Long]
+  type Partition = String
+  type Offset = Long
+  type Offsets = Map[Partition, Offset]
 }

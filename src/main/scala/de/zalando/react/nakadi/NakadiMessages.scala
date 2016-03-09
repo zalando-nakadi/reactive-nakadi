@@ -4,6 +4,7 @@ package de.zalando.react.nakadi
 object NakadiMessages {
 
   type Event = String
+  type Topic = String
 
   case class ProducerMessage(
     eventRecord: Seq[Event],
@@ -16,9 +17,9 @@ object NakadiMessages {
   )
 
   case class ConsumerMessage(
-    cursor: Option[Cursor] = None,
+    topic: Topic,
     events: Seq[Event],
-    topic: String
+    cursor: Cursor
   )
 
   type StringConsumerMessage = ConsumerMessage

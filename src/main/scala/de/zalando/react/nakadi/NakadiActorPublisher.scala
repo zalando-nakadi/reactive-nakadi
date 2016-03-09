@@ -2,19 +2,20 @@ package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
-import de.zalando.react.nakadi.NakadiActorPublisher.{CommitAck, CommitOffset}
+import de.zalando.react.nakadi.NakadiActorPublisher.{CommitOffsets, CommitAck}
 
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.NakadiMessages.StringConsumerMessage
+import de.zalando.react.nakadi.commit.OffsetMap
 
 import scala.annotation.tailrec
 
 
 object NakadiActorPublisher {
 
-  case object CommitOffset
-  case object CommitAck
+  case class CommitOffsets(offsetMap: OffsetMap)
+  case class CommitAck(offsetMap: OffsetMap)
   case object Stop
 
   def props(consumerAndProps: ReactiveNakadiConsumer) = {
@@ -44,7 +45,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     case Request(_)                               => deliverBuf()
     case SubscriptionTimeoutExceeded              => stop()
     case Cancel                                   => stop()
-    case CommitOffset                             => executeCommit()
+    case CommitOffsets(offsetMap)                 => executeCommit(offsetMap)
   }
 
   private def registerSupervisor(ref: ActorRef) = {
@@ -71,11 +72,11 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     }
   }
 
-  private def executeCommit(): Unit = {
+  private def executeCommit(offsetMap: OffsetMap): Unit = {
     val handler = consumerAndProps.properties.commitHandler
     if (handler.isEmpty) log.warning("There is no commit handler defined")
     else {
-      handler.get.commitSync(???)
+      handler.get.commitSync(offsetMap.toCommitRequestInfo)
       sender() ! CommitAck
     }
   }
@@ -103,8 +104,11 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   }
 
   private def toMessage(rawEvent: EventStreamBatch) = {
-    val cursor: Option[NakadiMessages.Cursor] = rawEvent.cursor.map(c => NakadiMessages.Cursor(partition = c.partition, offset = c.offset))
-    NakadiMessages.ConsumerMessage(cursor = cursor, events = rawEvent.events.getOrElse(Nil), topic = topic)
+    NakadiMessages.ConsumerMessage(
+      cursor = NakadiMessages.Cursor(rawEvent.cursor.partition, rawEvent.cursor.offset),
+      events = rawEvent.events.getOrElse(Nil),
+      topic = topic
+    )
   }
 
   def stop() = context.stop(self)

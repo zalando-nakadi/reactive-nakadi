@@ -1,9 +1,9 @@
 package de.zalando.react.nakadi.commit.handlers
 
-import de.zalando.react.nakadi.commit._
+import de.zalando.react.nakadi.NakadiMessages.Cursor
 
 trait BaseHandler {
 
-  def commitSync(offsets: Offsets)
+  def commitSync(cursors: Seq[Cursor])
 
 }

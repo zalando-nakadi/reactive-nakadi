@@ -97,9 +97,9 @@ class ConsumeEvents(properties: ConsumerProperties,
       }
   }
 
-  private def parseJson(byteString: ByteString) = {
+  private def parseJson(byteString: ByteString): EventStreamBatch = {
     import spray.json._
-    import JsonProtocol._
+    import NakadiJsonProtocol._
 
     var depth: Int = 0
     var hasOpenString: Boolean = false
@@ -129,12 +129,7 @@ class ConsumeEvents(properties: ConsumerProperties,
       }
     }
 
-    Try(recur(byteString).parseJson.convertTo[EventStreamBatch]) match {
-      case Success(event) => event
-      case Failure(err) =>
-        log.error(err, "Issue decoding JSON")
-        EventStreamBatch()
-    }
+    recur(byteString).parseJson.convertTo[EventStreamBatch]
   }
 }
 

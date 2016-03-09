@@ -7,6 +7,6 @@ case class Cursor(
 )
 
 case class EventStreamBatch(
-  cursor: Option[Cursor] = None,
+  cursor: Cursor,
   events: Option[Seq[String]] = None
 )
