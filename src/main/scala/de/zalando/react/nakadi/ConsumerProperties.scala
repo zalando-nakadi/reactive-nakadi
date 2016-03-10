@@ -13,13 +13,26 @@ object ConsumerProperties {
     server: String,
     securedConnection: Boolean,
     tokenProvider: () => String,
-    topic: String
+    topic: String,
+    groupId: String
   ): ConsumerProperties = {
-    if (securedConnection) {
-      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https://")
-    } else {
-      new ConsumerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 80, urlSchema = "http://")
-    }
+    if (securedConnection) { new ConsumerProperties(
+      server = server,
+      securedConnection = securedConnection,
+      tokenProvider = tokenProvider,
+      topic = topic,
+      groupId = groupId,
+      port = 443,
+      urlSchema = "https://"
+    )} else { new ConsumerProperties(
+      server = server,
+      securedConnection = securedConnection,
+      tokenProvider = tokenProvider,
+      topic = topic,
+      groupId = groupId,
+      port = 80,
+      urlSchema = "http://"
+    )}
   }
 }
 
@@ -28,6 +41,7 @@ case class ConsumerProperties(
   securedConnection: Boolean,
   tokenProvider: () => String,
   topic: String,
+  groupId: String,
   port: Int = 80,
   offset: String = "earliest",
   commitInterval: Option[FiniteDuration] = None,

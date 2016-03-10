@@ -13,12 +13,14 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
   def token = "random_token"
   val server = "some.server.zalando.net"
   val topic = uuid()
+  val grouoId = uuid()
 
   "ConsumerProperties" should "handle simple case" in {
     val props = ConsumerProperties(
       server = server,
       securedConnection = true,
       tokenProvider = () => token,
+      groupId = grouoId,
       topic = topic
     )
     props.server should === (server)
@@ -26,6 +28,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.securedConnection should === (true)
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
+    props.groupId should === (grouoId)
     props.offset should === ("earliest")
     props.commitInterval should === (None)
     props.consumerTimeoutSec should === (5.seconds)
@@ -44,6 +47,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       server = server,
       securedConnection = false,
       tokenProvider = () => token,
+      groupId = grouoId,
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
@@ -56,6 +60,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.securedConnection should === (false)
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
+    props.groupId should === (grouoId)
     props.offset should === ("latest")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
@@ -75,6 +80,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       server = server,
       securedConnection = false,
       tokenProvider = () => token,
+      groupId = grouoId,
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
@@ -85,6 +91,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.securedConnection should === (false)
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
+    props.groupId should === (grouoId)
     props.offset should === ("latest")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
@@ -103,6 +110,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       server = server,
       securedConnection = true,
       tokenProvider = () => token,
+      groupId = grouoId,
       topic = topic
     )
 
@@ -111,6 +119,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.securedConnection should === (true)
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
+    props.groupId should === (grouoId)
     props.sslVerify should === (true)
     props.urlSchema should === ("https://")
   }
@@ -120,6 +129,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       server = server,
       securedConnection = false,
       tokenProvider = () => token,
+      groupId = grouoId,
       topic = topic
     )
     intercept[IllegalArgumentException](props.withUrlSchema("someblah://"))

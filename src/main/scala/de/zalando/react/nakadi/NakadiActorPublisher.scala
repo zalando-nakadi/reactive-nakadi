@@ -4,10 +4,10 @@ import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
 import de.zalando.react.nakadi.NakadiActorPublisher.{CommitOffsets, CommitAck}
 
+import de.zalando.react.nakadi.commit.OffsetMap
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
-import de.zalando.react.nakadi.NakadiMessages.StringConsumerMessage
-import de.zalando.react.nakadi.commit.OffsetMap
+import de.zalando.react.nakadi.NakadiMessages.{Topic, StringConsumerMessage}
 
 import scala.annotation.tailrec
 
@@ -29,7 +29,8 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
 
   import akka.stream.actor.ActorPublisherMessage._
 
-  private val topic = consumerAndProps.properties.topic
+  private val topic: Topic = consumerAndProps.properties.topic
+  private val groupId: String = consumerAndProps.properties.groupId
   private val client: ActorRef = consumerAndProps.nakadiClient
   private var streamSupervisor: Option[ActorRef] = None  // TODO - There must be a better way...
 
@@ -76,7 +77,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     val handler = consumerAndProps.properties.commitHandler
     if (handler.isEmpty) log.warning("There is no commit handler defined")
     else {
-      handler.get.commitSync(offsetMap.toCommitRequestInfo)
+      handler.get.commitSync(groupId, topic, offsetMap.toCommitRequestInfo)
       sender() ! CommitAck
     }
   }

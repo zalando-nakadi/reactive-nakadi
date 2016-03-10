@@ -25,6 +25,7 @@ object TestApp extends App {
     securedConnection = true,
     tokenProvider = () => token,
     topic = "buffalo-test-topic",
+    groupId = "some-group",
     sslVerify = false,
     commitHandler = Some(new MemoryCommitHandler),
     port = 443,
