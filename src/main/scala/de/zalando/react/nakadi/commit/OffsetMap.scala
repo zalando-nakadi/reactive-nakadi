@@ -1,10 +1,9 @@
 package de.zalando.react.nakadi.commit
 
-import de.zalando.react.nakadi.NakadiMessages
-import de.zalando.react.nakadi.NakadiMessages.Cursor
+import org.joda.time.{DateTimeZone, DateTime}
 
 
-case class OffsetMap(var map: Offsets = Map.empty) {
+case class OffsetMap(var map: Map[TopicPartition, Long] = Map.empty) {
 
   def lastOffset(topicPartition: TopicPartition) = map.getOrElse(topicPartition, -1L)
 
@@ -12,22 +11,25 @@ case class OffsetMap(var map: Offsets = Map.empty) {
     OffsetMap((map.toSet diff other.map.toSet).toMap)
   }
 
-  def plusOffset(topicPartition: TopicPartition, offset: Offset) = {
+  def plusOffset(topicPartition: TopicPartition, offset: Long) = {
     this.copy(map = map + (topicPartition -> offset))
   }
 
-  def updateWithOffset(topicPartition: TopicPartition, offset: Offset) = {
+  def updateWithOffset(topicPartition: TopicPartition, offset: Long) = {
     map = map + (topicPartition -> offset)
   }
 
   def nonEmpty = map.nonEmpty
 
-  def toCommitRequestInfo: Seq[Cursor] = {
+  def toCommitRequestInfo(leaseHolder: String, leaseId: Option[String]): Seq[OffsetTracking] = {
 
     map.map { values =>
-      NakadiMessages.Cursor(
-        partition = values._1.partition.toString,
-        offset = values._2.toString
+      OffsetTracking(
+        partitionId = values._1.partition.toString,
+        checkpointId = values._2.toString,
+        leaseHolder = leaseHolder,
+        leaseTimestamp = new DateTime(DateTimeZone.UTC),
+        leaseId = leaseId
       )
     }.toSeq
   }
@@ -42,7 +44,7 @@ object OffsetMap {
 
   def apply() = new OffsetMap()
 
-  def offsetFromString(offset: String): Offset = {
+  def offsetFromStringToLong(offset: String): Long = {
     if (offset.forall(Character.isDigit)) offset.toLong
     else OffsetMapping.getOrElse(offset, throw new IllegalArgumentException("Invalid offset value")).toLong
   }

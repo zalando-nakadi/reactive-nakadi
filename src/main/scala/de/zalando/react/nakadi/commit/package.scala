@@ -4,23 +4,13 @@ import org.joda.time.DateTime
 
 
 package object commit {
-  type Offset = Long
-  type Offsets = Map[TopicPartition, Offset]
 
-  case class OffsetTrackingWrites(
-    partitionId: String,
-    checkpointId: String,
-    leaseHolder: String,
-    leaseCounter: Long,
-    leaseTimestamp: DateTime,
-    leaseId: Option[String] = None
-  )
-
-  case class OffsetTrackingReads(
+  case class OffsetTracking(
     partitionId: String,
     checkpointId: String,
     leaseHolder: String,
     leaseTimestamp: DateTime,
+    leaseCounter: Option[Long] = None,
     leaseId: Option[String] = None
   )
 }

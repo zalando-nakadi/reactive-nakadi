@@ -6,12 +6,14 @@ import akka.stream.ActorMaterializer
 
 import com.typesafe.config.ConfigFactory
 import de.zalando.react.nakadi.NakadiMessages.ConsumerMessage
-import de.zalando.react.nakadi.commit.handlers.MemoryCommitHandler
+import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBHandler
+
+import scala.concurrent.duration._
 
 
 object TestApp extends App {
 
-  val token = "SOME-TOKEN"
+  val token = ""
 
   val config = ConfigFactory.load()
 
@@ -24,12 +26,13 @@ object TestApp extends App {
     server = "nakadi-sandbox.aruha-test.zalan.do",
     securedConnection = true,
     tokenProvider = () => token,
-    topic = "buffalo-test-topic",
+    topic = "reactive-nakadi-testing",
     groupId = "some-group",
     sslVerify = false,
-    commitHandler = Some(new MemoryCommitHandler),
+    commitHandler = Some(new DynamoDBHandler(system)),
     port = 443,
-    urlSchema = "https://"
+    urlSchema = "https://",
+    commitInterval = Some(10.seconds)
   ))
 
   def echo(msg: ConsumerMessage) = {

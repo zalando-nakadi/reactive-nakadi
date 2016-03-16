@@ -73,7 +73,7 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
   }
 
   def updateOffsetIfLarger(msg: ConsumerMessage, last: Long): Unit = {
-    val msgOffset = OffsetMap.offsetFromString(msg.cursor.offset.toString)
+    val msgOffset = OffsetMap.offsetFromStringToLong(msg.cursor.offset.toString)
     if (msgOffset > last) {
       log.debug(s"Registering commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered = $last")
       val topicPartition = TopicPartition(msg.topic.toString, msg.cursor.partition.toInt)

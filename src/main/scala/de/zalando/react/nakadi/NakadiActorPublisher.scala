@@ -77,7 +77,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     val handler = consumerAndProps.properties.commitHandler
     if (handler.isEmpty) log.warning("There is no commit handler defined")
     else {
-      handler.get.commitSync(groupId, topic, offsetMap.toCommitRequestInfo)
+      handler.get.commitSync(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-holder")))
       sender() ! CommitAck
     }
   }

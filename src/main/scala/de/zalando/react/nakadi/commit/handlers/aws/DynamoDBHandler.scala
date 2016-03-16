@@ -1,14 +1,16 @@
 package de.zalando.react.nakadi.commit.handlers.aws
 
 import akka.actor.ActorSystem
-import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
+import de.zalando.react.nakadi.commit.OffsetTracking
 
+import de.zalando.react.nakadi.NakadiMessages.Topic
 import de.zalando.react.nakadi.commit.handlers.BaseHandler
-import de.zalando.react.nakadi.NakadiMessages.{Topic, Cursor}
 
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.document.{Item, Table}
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec
+import org.joda.time.{DateTimeZone, DateTime}
 
 import scala.util.{Failure, Success}
 import scala.concurrent.Future
@@ -19,6 +21,13 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   import system.dispatcher
 
+  val PartitionIdKey = "partitionId"
+  val CheckpointIdKey = "checkpointId"
+  val LeaseHolderKey = "leaseHolder"
+  val LeaseCounterKey = "leaseCounter"
+  val LeaseTimestampKey = "leaseTimestamp"
+  val LeaseIdKey = "leaseId"
+
   private val log = system.log
   private lazy val awsConfiguration: AWSConfig = awsConfig.fold(AWSConfig())(cnf => cnf)
   private lazy val ddbClient = clientProvider.fold(ClientProvider(awsConfiguration.region))(provider => provider).client
@@ -27,64 +36,75 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   def tableName(groupId: String, topic: Topic) = s"reactive-nakadi-$topic-$groupId"
 
-  override def commitSync(groupId: String, topic: Topic, cursors: Seq[Cursor]) = {
-    update(groupId, topic).onComplete {
+  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]) = {
+    update(groupId, topic, offsets).onComplete {
       case Failure(err) => log.error(err, "AWS Error")
-      case Success(_) => println("done")
+      case Success(_) => read(groupId, topic, "0").map(println).recover { case err => log.error(err, "There was an error reading")}
     }
   }
 
-  def read(groupId: String, topic: Topic): Future[Item] = {
+  def read(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = Future {
 
-    val table = tableName(groupId, topic)
-    Future {
-      ddbClient.getTable(table).getItem("partitionId", "1")
+    Option(ddbClient.getTable(tableName(groupId, topic)).getItem(PartitionIdKey, partitionId)).map { i =>
+      OffsetTracking(
+        partitionId = i.getString(PartitionIdKey),
+        checkpointId = i.getString(CheckpointIdKey),
+        leaseHolder = i.getString(LeaseHolderKey),
+        leaseCounter = Option(i.getLong(LeaseCounterKey)),
+        leaseTimestamp = new DateTime(i.getString(LeaseTimestampKey), DateTimeZone.UTC),
+        leaseId = Option(i.getString(LeaseIdKey))
+      )
     }
   }
 
-  def create(groupId: String, topic: Topic): Future[Unit] = {
+  def create(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
     withTable(groupId, topic) { table =>
       Future {
-        table.putItem(new Item()
-          .withPrimaryKey("partitionId", "1")
-          .withString("checkpointId", "some_checkpoint_id")
-          .withString("leaseHolder", "some_lease_holder")
-          .withNumber("leaseCounter", 1)
-          .withString("leaseTimestamp", "some_lease_id")
-          .withString("leaseId", "some_lease_timestamp")
-        )
-      }.map { outcome =>
-        log.debug(s"Put item outcome: ${outcome.getPutItemResult}")
-      }
+        offsets.map { offsetTracking =>
+          val item = new Item()
+            .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+            .withString(CheckpointIdKey, offsetTracking.checkpointId)
+            .withString(LeaseHolderKey, offsetTracking.leaseHolder)
+            .withNumber(LeaseCounterKey, 1)
+            .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
+          offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
+          table.putItem(item)
+        }
+      }.map(_.foreach(outcome => log.debug(s"Put item outcome: ${outcome.getPutItemResult}")))
     }
   }
 
-  def update(groupId: String, topic: Topic): Future[Unit] = {
+  def update(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
     withTable(groupId, topic) { table =>
       Future {
-        table.updateItem(new UpdateItemSpec()
-          .withPrimaryKey("partitionId", "1")
-          .withUpdateExpression(
-            """
-            |SET
-            | checkpointId = :oval,
-            | leaseHolder = :lhval,
-            | leaseCounter = leaseCounter + :lcval,
-            | leaseTimestamp = :ltsval,
-            | leaseId = :lidval
-            | """.stripMargin)
-        .withValueMap(new ValueMap()
-          .withString(":oval", "NEW_offset")
-          .withString(":lhval", "NEW_leaseHolder")
-          .withNumber(":lcval", 1)
-          .withString(":ltsval", "NEW_leaseTimestamp")
-          .withString(":lidval", "NEW_leaseId")
-        ))
-      }.map { outcome =>
-        log.debug(s"Put item outcome: ${outcome.getUpdateItemResult}")
-      }
+        offsets.map { offsetTracking =>
+          val valueMap = new ValueMap()
+            .withString(":cidval", offsetTracking.checkpointId)
+            .withString(":lhval", offsetTracking.leaseHolder)
+            .withNumber(":lcval", 1)
+            .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
+
+          var leaseIdKey = ""
+          offsetTracking.leaseId.foreach { leaseId =>
+            valueMap.withString(":lidval", leaseId)
+            leaseIdKey = s", $LeaseIdKey = :lidval"
+          }
+
+          table.updateItem(new UpdateItemSpec()
+            .withPrimaryKey("partitionId", offsetTracking.partitionId)
+            .withUpdateExpression(
+              s"""
+                |SET
+                | $CheckpointIdKey = :cidval,
+                | $LeaseHolderKey = :lhval,
+                | $LeaseCounterKey = leaseCounter + :lcval,
+                | $LeaseTimestampKey = :ltsval $leaseIdKey
+                | """.stripMargin)
+            .withValueMap(valueMap))
+        }
+      }.map(_.foreach(outcome => log.info(s"Update item outcome: ${outcome.getUpdateItemResult}")))
     }
   }
 
