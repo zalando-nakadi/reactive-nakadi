@@ -36,10 +36,10 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   def tableName(groupId: String, topic: Topic) = s"reactive-nakadi-$topic-$groupId"
 
-  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]) = {
-    update(groupId, topic, offsets).onComplete {
-      case Failure(err) => log.error(err, "AWS Error")
-      case Success(_) => read(groupId, topic, "0").map(println).recover { case err => log.error(err, "There was an error reading")}
+  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Unit = {
+    put(groupId, topic, offsets).onComplete {
+      case Failure(err) => log.error(err, "AWS Error:")
+      case Success(_) =>
     }
   }
 
@@ -57,58 +57,65 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }
   }
 
-  def create(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  def put(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
-    withTable(groupId, topic) { table =>
-      Future {
-        offsets.map { offsetTracking =>
-          val item = new Item()
-            .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
-            .withString(CheckpointIdKey, offsetTracking.checkpointId)
-            .withString(LeaseHolderKey, offsetTracking.leaseHolder)
-            .withNumber(LeaseCounterKey, 1)
-            .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
-          offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
-          table.putItem(item)
-        }
-      }.map(_.foreach(outcome => log.debug(s"Put item outcome: ${outcome.getPutItemResult}")))
+    withTable(groupId, topic, offsets) {
+      case (table, true) =>
+        // Table just created
+        handleOnCreated(table, groupId, topic, offsets)
+      case (table, false) =>
+        // Table already existed
+        handleUpdate(table, groupId, topic, offsets)
     }
   }
 
-  def update(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  private def handleUpdate(table: Table, groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+    Future {
+      offsets.map { offsetTracking =>
+        val valueMap = new ValueMap()
+          .withString(":cidval", offsetTracking.checkpointId)
+          .withString(":lhval", offsetTracking.leaseHolder)
+          .withNumber(":lcval", 1)
+          .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
 
-    withTable(groupId, topic) { table =>
-      Future {
-        offsets.map { offsetTracking =>
-          val valueMap = new ValueMap()
-            .withString(":cidval", offsetTracking.checkpointId)
-            .withString(":lhval", offsetTracking.leaseHolder)
-            .withNumber(":lcval", 1)
-            .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
-
-          var leaseIdKey = ""
-          offsetTracking.leaseId.foreach { leaseId =>
-            valueMap.withString(":lidval", leaseId)
-            leaseIdKey = s", $LeaseIdKey = :lidval"
-          }
-
-          table.updateItem(new UpdateItemSpec()
-            .withPrimaryKey("partitionId", offsetTracking.partitionId)
-            .withUpdateExpression(
-              s"""
-                |SET
-                | $CheckpointIdKey = :cidval,
-                | $LeaseHolderKey = :lhval,
-                | $LeaseCounterKey = leaseCounter + :lcval,
-                | $LeaseTimestampKey = :ltsval $leaseIdKey
-                | """.stripMargin)
-            .withValueMap(valueMap))
+        var leaseIdKey = ""
+        offsetTracking.leaseId.foreach { leaseId =>
+          valueMap.withString(":lidval", leaseId)
+          leaseIdKey = s", $LeaseIdKey = :lidval"
         }
-      }.map(_.foreach(outcome => log.info(s"Update item outcome: ${outcome.getUpdateItemResult}")))
-    }
+
+        table.updateItem(new UpdateItemSpec()
+          .withPrimaryKey("partitionId", offsetTracking.partitionId)
+          .withUpdateExpression(
+            s"""
+               |SET
+               | $CheckpointIdKey = :cidval,
+               | $LeaseHolderKey = :lhval,
+               | $LeaseCounterKey = leaseCounter + :lcval,
+               | $LeaseTimestampKey = :ltsval $leaseIdKey
+               | """.stripMargin)
+          .withValueMap(valueMap))
+      }
+    }.map(_.foreach(outcome => log.debug(s"Update item outcome: ${outcome.getUpdateItemResult}")))
   }
 
-  private def withTable(groupId: String, topic: Topic)(func: Table => Future[Unit]): Future[Unit] = {
+  private def handleOnCreated(table: Table, groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+
+    Future {
+      offsets.map { offsetTracking =>
+        val item = new Item()
+          .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+          .withString(CheckpointIdKey, offsetTracking.checkpointId)
+          .withString(LeaseHolderKey, offsetTracking.leaseHolder)
+          .withNumber(LeaseCounterKey, 1)
+          .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
+        offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
+        table.putItem(item)
+      }
+    }.map(_.foreach(outcome => log.debug(s"Put item outcome: ${outcome.getPutItemResult}")))
+  }
+
+  private def withTable(groupId: String, topic: Topic, offsets: Seq[OffsetTracking])(func: ((Table, Boolean)) => Future[Unit]): Future[Unit] = {
 
     val table = tableName(groupId, topic)
     Future {
@@ -122,11 +129,11 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
             .withWriteCapacityUnits(awsConfiguration.writeCapacityUnits)
         ))
       tableObj.waitForActive()
-      tableObj
+      (tableObj, true)
     }.recover {
       case tableExists: ResourceInUseException =>
         log.debug(s"Table $table already exists")
-        ddbClient.getTable(table)
+        (ddbClient.getTable(table), false)
     }.flatMap(func)
   }
 }
