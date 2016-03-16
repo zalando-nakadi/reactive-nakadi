@@ -21,14 +21,14 @@ case class OffsetMap(var map: Map[TopicPartition, Long] = Map.empty) {
 
   def nonEmpty = map.nonEmpty
 
-  def toCommitRequestInfo(leaseHolder: String, leaseId: Option[String]): Seq[OffsetTracking] = {
+  def toCommitRequestInfo(leaseHolder: String, leaseId: Option[String], leaseTimestamp: DateTime = new DateTime(DateTimeZone.UTC)): Seq[OffsetTracking] = {
 
     map.map { values =>
       OffsetTracking(
         partitionId = values._1.partition.toString,
         checkpointId = values._2.toString,
         leaseHolder = leaseHolder,
-        leaseTimestamp = new DateTime(DateTimeZone.UTC),
+        leaseTimestamp = leaseTimestamp,
         leaseId = leaseId
       )
     }.toSeq

@@ -1,5 +1,6 @@
 package de.zalando.react.nakadi.commit
 
+import org.joda.time.{DateTimeZone, DateTime}
 import org.scalatest.{Matchers, FlatSpec}
 
 
@@ -60,13 +61,22 @@ class OffsetMapSpec extends FlatSpec with Matchers {
   }
 
   it should "be able to convert toCommitRequestInfo" in {
-    import de.zalando.react.nakadi.NakadiMessages.Cursor
+    val now = new DateTime(DateTimeZone.UTC)
 
     val topicPartition1 = TopicPartition("my-topic", 60)
     val topicPartition2 = TopicPartition("my-topic", 50)
     val offset = OffsetMap(Map(topicPartition1 -> 10, topicPartition2 -> 20))
-    val expected = Seq(Cursor(partition = "60", offset = "10"), Cursor(partition = "50", offset = "20"))
-    offset.toCommitRequestInfo should === (expected)
+    val expected = Seq(
+      OffsetTracking(
+        partitionId = "60", checkpointId = "10", leaseHolder = "test-lease-holder",
+        leaseTimestamp = now, leaseId = Option("test-lease-id")
+      ),
+      OffsetTracking(
+        partitionId = "50", checkpointId = "20", leaseHolder = "test-lease-holder",
+        leaseTimestamp = now, leaseId = Option("test-lease-id")
+      )
+    )
+    offset.toCommitRequestInfo("test-lease-holder", Some("test-lease-id"), now) should === (expected)
   }
 
   "OffsetMap object" should "be able to convert an offset string digit to a Offset (type Long) value" in {
