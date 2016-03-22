@@ -2,8 +2,12 @@ package de.zalando.react.nakadi
 
 import java.util.UUID
 
+import de.zalando.react.nakadi.NakadiMessages.Topic
+import de.zalando.react.nakadi.commit.OffsetTracking
+import de.zalando.react.nakadi.commit.handlers.BaseHandler
 import org.scalatest.{FlatSpec, Matchers}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
@@ -15,12 +19,17 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
   val topic = uuid()
   val grouoId = uuid()
 
+  object DummyCommitHandler extends BaseHandler {
+    override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = ???
+  }
+
   "ConsumerProperties" should "handle simple case" in {
     val props = ConsumerProperties(
       server = server,
       securedConnection = true,
       tokenProvider = () => token,
       groupId = grouoId,
+      commitHandler = DummyCommitHandler,
       topic = topic
     )
     props.server should === (server)
@@ -29,6 +38,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.commitHandler should === (DummyCommitHandler)
     props.offset should === ("earliest")
     props.commitInterval should === (None)
     props.consumerTimeoutSec should === (5.seconds)
@@ -48,6 +58,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      commitHandler = DummyCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
@@ -61,6 +72,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.commitHandler should === (DummyCommitHandler)
     props.offset should === ("latest")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
@@ -81,6 +93,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      commitHandler = DummyCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
@@ -92,6 +105,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.commitHandler should === (DummyCommitHandler)
     props.offset should === ("latest")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
@@ -111,6 +125,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = true,
       tokenProvider = () => token,
       groupId = grouoId,
+      commitHandler = DummyCommitHandler,
       topic = topic
     )
 
@@ -120,6 +135,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.commitHandler should === (DummyCommitHandler)
     props.sslVerify should === (true)
     props.urlSchema should === ("https://")
   }
@@ -130,6 +146,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      commitHandler = DummyCommitHandler,
       topic = topic
     )
     intercept[IllegalArgumentException](props.withUrlSchema("someblah://"))

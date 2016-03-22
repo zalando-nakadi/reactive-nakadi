@@ -14,7 +14,8 @@ object ConsumerProperties {
     securedConnection: Boolean,
     tokenProvider: () => String,
     topic: String,
-    groupId: String
+    groupId: String,
+    commitHandler: BaseHandler
   ): ConsumerProperties = {
     if (securedConnection) { new ConsumerProperties(
       server = server,
@@ -22,6 +23,7 @@ object ConsumerProperties {
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
+      commitHandler,
       port = 443,
       urlSchema = "https://"
     )} else { new ConsumerProperties(
@@ -30,6 +32,7 @@ object ConsumerProperties {
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
+      commitHandler,
       port = 80,
       urlSchema = "http://"
     )}
@@ -42,6 +45,7 @@ case class ConsumerProperties(
   tokenProvider: () => String,
   topic: String,
   groupId: String,
+  commitHandler: BaseHandler,
   port: Int = 80,
   offset: String = "earliest",
   commitInterval: Option[FiniteDuration] = None,
@@ -54,8 +58,7 @@ case class ConsumerProperties(
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
   sslVerify: Boolean = true,
-  urlSchema: String = "https://",
-  commitHandler: Option[BaseHandler] = None
+  urlSchema: String = "https://"
 ) {
 
   /**

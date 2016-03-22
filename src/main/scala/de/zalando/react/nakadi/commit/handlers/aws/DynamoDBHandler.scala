@@ -12,7 +12,6 @@ import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec
 import org.joda.time.{DateTimeZone, DateTime}
 
-import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
@@ -31,16 +30,13 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
   private val log = system.log
   private lazy val awsConfiguration: AWSConfig = awsConfig.fold(AWSConfig())(cnf => cnf)
   private lazy val ddbClient = clientProvider.fold(ClientProvider(awsConfiguration.region))(provider => provider).client
-  private val keySchema = Seq(new KeySchemaElement().withAttributeName("partitionId").withKeyType(KeyType.HASH))
-  private val attributeDefinitions = Seq(new AttributeDefinition().withAttributeName("partitionId").withAttributeType(ScalarAttributeType.S))
+  private val keySchema = Seq(new KeySchemaElement().withAttributeName(PartitionIdKey).withKeyType(KeyType.HASH))
+  private val attributeDefinitions = Seq(new AttributeDefinition().withAttributeName(PartitionIdKey).withAttributeType(ScalarAttributeType.S))
 
   def tableName(groupId: String, topic: Topic) = s"reactive-nakadi-$topic-$groupId"
 
-  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Unit = {
-    put(groupId, topic, offsets).onComplete {
-      case Failure(err) => log.error(err, "AWS Error:")
-      case Success(_) =>
-    }
+  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+    put(groupId, topic, offsets)
   }
 
   def read(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = Future {

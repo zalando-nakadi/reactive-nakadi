@@ -2,14 +2,15 @@ package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
-import de.zalando.react.nakadi.NakadiActorPublisher.{CommitOffsets, CommitAck}
 
 import de.zalando.react.nakadi.commit.OffsetMap
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
-import de.zalando.react.nakadi.NakadiMessages.{Topic, StringConsumerMessage}
+import de.zalando.react.nakadi.NakadiActorPublisher.{CommitAck, CommitOffsets}
+import de.zalando.react.nakadi.NakadiMessages.{StringConsumerMessage, Topic}
 
 import scala.annotation.tailrec
+import scala.util.{Failure, Success}
 
 
 object NakadiActorPublisher {
@@ -74,12 +75,18 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   }
 
   private def executeCommit(offsetMap: OffsetMap): Unit = {
-    val handler = consumerAndProps.properties.commitHandler
-    if (handler.isEmpty) log.warning("There is no commit handler defined")
-    else {
-      handler.get.commitSync(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-id")))
-      sender() ! CommitAck
-    }
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val senderRef = sender()
+
+    // FIXME - perhaps make the commit handler a separate Actor
+    consumerAndProps
+      .properties
+      .commitHandler
+      .commitSync(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-id")))
+      .onComplete {
+        case Failure(err) => log.error(err, "AWS Error:")
+        case Success(_) => senderRef ! CommitAck
+      }
   }
 
   @tailrec
