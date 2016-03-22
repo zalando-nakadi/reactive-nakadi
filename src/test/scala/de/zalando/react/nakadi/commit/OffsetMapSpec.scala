@@ -79,24 +79,4 @@ class OffsetMapSpec extends FlatSpec with Matchers {
     offset.toCommitRequestInfo("test-lease-holder", Some("test-lease-id"), now) should === (expected)
   }
 
-  "OffsetMap object" should "be able to convert an offset string digit to a Offset (type Long) value" in {
-    OffsetMap.offsetFromStringToLong("10") should === (10L)
-  }
-
-  it should "be able to convert an offset string symbolic value to a Offset (type Long) value" in {
-    OffsetMap.offsetFromStringToLong("BEGIN") should === (0L)
-  }
-
-  it should "be able to convert a single offset string digit to a Offset (type Long) value" in {
-    OffsetMap.offsetFromStringToLong("3") should === (3L)
-  }
-
-  it should "throw an error if there is an invalid offset value" in {
-    intercept[IllegalArgumentException](OffsetMap.offsetFromStringToLong("something invalid"))
-  }
-
-  it should "create a new instance with empty map" in {
-    OffsetMap().map should === (Map.empty)
-  }
-
 }

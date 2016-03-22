@@ -1,5 +1,6 @@
 package de.zalando.react.nakadi
 
+import de.zalando.react.nakadi.NakadiMessages._
 import de.zalando.react.nakadi.commit.handlers.BaseHandler
 
 import scala.language.postfixOps
@@ -47,7 +48,7 @@ case class ConsumerProperties(
   groupId: String,
   commitHandler: BaseHandler,
   port: Int = 80,
-  offset: String = "earliest",
+  offset: Option[Offset] = None,
   commitInterval: Option[FiniteDuration] = None,
   consumerTimeoutSec: FiniteDuration = 5.seconds,
   batchLimit: Int = 0,
@@ -74,8 +75,8 @@ case class ConsumerProperties(
   def consumerTimeoutSec(timeInSec: FiniteDuration): ConsumerProperties =
     this.copy(consumerTimeoutSec = timeInSec)
 
-  def readFromEndOfStream(): ConsumerProperties =
-    this.copy(offset = "latest")
+  def readFromStartOfStream(): ConsumerProperties =
+    this.copy(offset = Some(BeginOffset.apply))
 
   def withPort(port: Int): ConsumerProperties =
     this.copy(port = port)

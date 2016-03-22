@@ -39,7 +39,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.commitHandler should === (DummyCommitHandler)
-    props.offset should === ("earliest")
+    props.offset should === (None)
     props.commitInterval should === (None)
     props.consumerTimeoutSec should === (5.seconds)
     props.batchLimit should === (0)
@@ -62,7 +62,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
-      .readFromEndOfStream
+      .readFromStartOfStream()
       .withPort(9999)
       .withUrlSchema("http://")
 
@@ -73,7 +73,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.commitHandler should === (DummyCommitHandler)
-    props.offset should === ("latest")
+    props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
     props.batchLimit should === (0)
@@ -97,7 +97,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       topic = topic
     ).commitInterval(10.seconds)
       .consumerTimeoutSec(20.seconds)
-      .readFromEndOfStream
+      .readFromStartOfStream()
 
     props.server should === (server)
     props.port should === (80)
@@ -106,7 +106,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.commitHandler should === (DummyCommitHandler)
-    props.offset should === ("latest")
+    props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (Some(10.seconds))
     props.consumerTimeoutSec should === (20.seconds)
     props.batchLimit should === (0)

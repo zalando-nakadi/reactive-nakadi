@@ -38,14 +38,5 @@ case class OffsetMap(var map: Map[TopicPartition, Long] = Map.empty) {
 
 object OffsetMap {
 
-  import de.zalando.react.nakadi.client.models._
-
-  val OffsetMapping = Map(OffsetSymbolicValue.Begin.toString -> 0L)
-
   def apply() = new OffsetMap()
-
-  def offsetFromStringToLong(offset: String): Long = {
-    if (offset.forall(Character.isDigit)) offset.toLong
-    else OffsetMapping.getOrElse(offset, throw new IllegalArgumentException("Invalid offset value")).toLong
-  }
 }
