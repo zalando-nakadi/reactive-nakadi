@@ -76,7 +76,7 @@ case class ConsumerProperties(
     this.copy(consumerTimeoutSec = timeInSec)
 
   def readFromStartOfStream(): ConsumerProperties =
-    this.copy(offset = Some(BeginOffset.apply))
+    this.copy(offset = Some(BeginOffset))
 
   def withPort(port: Int): ConsumerProperties =
     this.copy(port = port)

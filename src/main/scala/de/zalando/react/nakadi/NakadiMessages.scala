@@ -6,12 +6,6 @@ object NakadiMessages {
   type Event = String
   type Topic = String
 
-  object BeginOffset {
-    val value = "BEGIN"
-    def apply: Offset = new Offset(value)
-    override def toString: String = value
-  }
-
   case class Offset(value: String) {
 
     override def toString: String = value
@@ -23,6 +17,7 @@ object NakadiMessages {
     }
   }
 
+  object BeginOffset extends Offset("BEGIN")
 
   case class ProducerMessage(
     eventRecord: Seq[Event],

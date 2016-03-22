@@ -14,7 +14,7 @@ class NakadiMessagesTest extends FlatSpec with Matchers {
   }
 
   it should "be able to convert an offset string symbolic value to a Offset (type Long) value" in {
-    BeginOffset.apply.toLong should === (0L)
+    BeginOffset.toLong should === (0L)
     Offset("BEGIN").toLong should === (0L)
   }
 
