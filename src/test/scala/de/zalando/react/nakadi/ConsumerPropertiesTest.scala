@@ -18,9 +18,11 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
   val server = "some.server.zalando.net"
   val topic = uuid()
   val grouoId = uuid()
+  val partition = uuid()
 
   object DummyCommitHandler extends BaseHandler {
     override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = ???
+    override def readCommit(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = ???
   }
 
   "ConsumerProperties" should "handle simple case" in {
@@ -29,6 +31,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = true,
       tokenProvider = () => token,
       groupId = grouoId,
+      partition = partition,
       commitHandler = DummyCommitHandler,
       topic = topic
     )
@@ -38,6 +41,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset should === (None)
     props.commitInterval should === (None)
@@ -58,6 +62,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      partition = partition,
       commitHandler = DummyCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
@@ -72,6 +77,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (Some(10.seconds))
@@ -93,6 +99,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      partition = partition,
       commitHandler = DummyCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
@@ -105,6 +112,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (Some(10.seconds))
@@ -125,6 +133,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = true,
       tokenProvider = () => token,
       groupId = grouoId,
+      partition = partition,
       commitHandler = DummyCommitHandler,
       topic = topic
     )
@@ -135,6 +144,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
+    props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.sslVerify should === (true)
     props.urlSchema should === ("https://")
@@ -146,6 +156,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       securedConnection = false,
       tokenProvider = () => token,
       groupId = grouoId,
+      partition = partition,
       commitHandler = DummyCommitHandler,
       topic = topic
     )

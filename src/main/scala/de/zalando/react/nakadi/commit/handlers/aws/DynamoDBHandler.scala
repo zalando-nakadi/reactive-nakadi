@@ -39,7 +39,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     put(groupId, topic, offsets)
   }
 
-  def read(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = Future {
+  override def readCommit(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = Future {
 
     Option(ddbClient.getTable(tableName(groupId, topic)).getItem(PartitionIdKey, partitionId)).map { i =>
       OffsetTracking(

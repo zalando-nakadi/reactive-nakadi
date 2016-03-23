@@ -16,6 +16,7 @@ object ConsumerProperties {
     tokenProvider: () => String,
     topic: String,
     groupId: String,
+    partition: String,
     commitHandler: BaseHandler
   ): ConsumerProperties = {
     if (securedConnection) { new ConsumerProperties(
@@ -24,7 +25,8 @@ object ConsumerProperties {
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
-      commitHandler,
+      partition = partition,
+      commitHandler = commitHandler,
       port = 443,
       urlSchema = "https://"
     )} else { new ConsumerProperties(
@@ -33,7 +35,8 @@ object ConsumerProperties {
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
-      commitHandler,
+      partition = partition,
+      commitHandler = commitHandler,
       port = 80,
       urlSchema = "http://"
     )}
@@ -46,6 +49,7 @@ case class ConsumerProperties(
   tokenProvider: () => String,
   topic: String,
   groupId: String,
+  partition: String,
   commitHandler: BaseHandler,
   port: Int = 80,
   offset: Option[Offset] = None,

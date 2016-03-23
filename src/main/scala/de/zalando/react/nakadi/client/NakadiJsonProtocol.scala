@@ -7,7 +7,7 @@ import models._
 
 object NakadiJsonProtocol extends DefaultJsonProtocol {
 
-  implicit object EventStreamBatchFormat extends RootJsonReader[EventStreamBatch] {
+  implicit object EventStreamReadFormat extends RootJsonReader[EventStreamBatch] {
 
     private def handleCursor(cursor: Map[String, JsValue]): Cursor = {
       val cursorJsObj = JsObject(cursor.map { case (k, v) => k -> v.asInstanceOf[JsString]} )
@@ -33,6 +33,15 @@ object NakadiJsonProtocol extends DefaultJsonProtocol {
         case _ =>
           throw new IllegalArgumentException(s"Invalid JSON for ${value.compactPrint}")
       }
+    }
+  }
+
+  implicit object CursorWriteFormat extends RootJsonWriter[Seq[Cursor]] {
+
+    override def write(cursor: Seq[Cursor]): JsValue = {
+      JsArray(cursor.map { c =>
+        JsObject(Map("partition" -> JsString(c.partition), "offset" -> JsString(c.offset)))
+      }.toVector)
     }
   }
 

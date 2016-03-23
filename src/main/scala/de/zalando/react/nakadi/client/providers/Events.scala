@@ -2,27 +2,30 @@ package de.zalando.react.nakadi.client.providers
 
 import java.io.ByteArrayOutputStream
 
-import akka.http.scaladsl.Http.OutgoingConnection
+import spray.json._
+
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.MediaTypes._
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
+import akka.http.scaladsl.model.HttpMethods._
+import akka.http.scaladsl.Http.OutgoingConnection
+import akka.http.scaladsl.model.HttpEntity.{ChunkStreamPart, Chunked}
+import akka.http.scaladsl.model.headers.{OAuth2BearerToken, RawHeader}
 
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
-import akka.stream.scaladsl.{Flow, Sink, Source}
-
 import akka.util.ByteString
 import akka.event.LoggingAdapter
-import akka.actor.{ActorRef, ActorContext}
+import akka.actor.{ActorContext, ActorRef}
+import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
 
 import de.zalando.react.nakadi.client._
-import de.zalando.react.nakadi.client.models.EventStreamBatch
-import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
+import de.zalando.react.nakadi.client.NakadiJsonProtocol._
+import de.zalando.react.nakadi.client.models.{Cursor, EventStreamBatch}
+import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
 
 import scala.concurrent.Future
 import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
 
 
 object ConsumeCommand {
@@ -38,12 +41,11 @@ class ConsumeEvents(properties: ConsumerProperties,
                     log: LoggingAdapter,
                     outgoingConnection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]]) {
 
+  import actorContext.dispatcher
+
   val DefaultBufferSize = 1000
 
-  def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Future[Unit] = {
-    import ConsumeCommand._
-    import actorContext.dispatcher
-
+  def request: Future[HttpRequest] = {
     val streamEventUri = URI_STREAM_EVENTS.format(
       properties.topic,
       properties.batchLimit,
@@ -60,7 +62,13 @@ class ConsumeEvents(properties: ConsumerProperties,
         headers.Accept(MediaRange(`application/json`))
       )
 
-    val parse = Flow[ByteString].map(parseJson)
+    cursorHeader.map(_.fold(request)(request.addHeader(_)))
+  }
+
+  def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Future[Unit] = {
+    import ConsumeCommand._
+
+    val parse = Flow[ChunkStreamPart].map(parseJson)
     val buff = Flow[EventStreamBatch].buffer(DefaultBufferSize, OverflowStrategy.backpressure)
     val logger = Flow[EventStreamBatch].log("nakadi-event-stream")
     val out = Sink.actorRefWithAck(
@@ -72,21 +80,27 @@ class ConsumeEvents(properties: ConsumerProperties,
     )
 
     val consumer = Flow[HttpResponse].map {
-      case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
+      case HttpResponse(status, _, entity, _) if status.isSuccess() =>
+        log.info(s"Successfully connected to Nakadi on ${properties.urlSchema}${properties.server}/")
         RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
           import GraphDSL.Implicits._
-          val in = entity.dataBytes
+          val in = Chunked
+            .fromData(entity.contentType, entity.dataBytes)
+            .withoutSizeLimit()
+            .chunks
 
           in ~> parse ~> buff ~> logger ~> out
 
           ClosedShape
         }).run()
-      case HttpResponse(code, _, _, _) =>
-        log.warning(s"Request failed, response code: $code")
+      case HttpResponse(status, _, entity, _) =>
+        entity.toStrict(5.seconds).map { d =>
+          log.warning(s"Request failed, response code: $status. Response body: ${d.data.decodeString("UTF-8")}")
+        }
     }
 
-    Source
-      .single(request)
+    request.flatMap { Source
+      .single(_)
       .via(outgoingConnection)
       .via(consumer)
       .runWith(Sink.ignore)
@@ -95,12 +109,10 @@ class ConsumeEvents(properties: ConsumerProperties,
         case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
         case ex => log.error(ex, "Error connecting to Nakadi")
       }
+    }
   }
 
-  private def parseJson(byteString: ByteString): EventStreamBatch = {
-    import spray.json._
-    import NakadiJsonProtocol._
-
+  private def parseJson(chunk: ChunkStreamPart): EventStreamBatch = {
     var depth: Int = 0
     var hasOpenString: Boolean = false
     val bout = new ByteArrayOutputStream(1024)
@@ -129,8 +141,33 @@ class ConsumeEvents(properties: ConsumerProperties,
       }
     }
 
-    recur(byteString).parseJson.convertTo[EventStreamBatch]
+    recur(chunk.data).parseJson.convertTo[EventStreamBatch]
   }
+
+  private def toHeader(cursor: Cursor) = {
+    log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for topic '${properties.topic}'")
+    RawHeader("X-Nakadi-Cursors", Seq(cursor).toJson.toString)
+  }
+
+  private def readFromCommitHandler: Future[Option[Cursor]] = {
+    properties
+      .commitHandler
+      .readCommit(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
+      Cursor(partition = offsetTracking.partitionId, offset = offsetTracking.checkpointId)
+    }).recover {
+      case ex =>
+        log.error(ex, "There was an error reading back the commit.")
+        sys.error("Commit read exception raised")
+    }
+  }
+
+  private def cursorHeader: Future[Option[RawHeader]] = {
+    properties.offset.fold(readFromCommitHandler.map(_.map(toHeader))) { offset =>
+      val cursor = Cursor(partition = properties.partition, offset = offset.value)
+      Future.successful(Option(toHeader(cursor)))
+    }
+  }
+
 }
 
 
