@@ -23,7 +23,7 @@ case class ProducerProperties(
   topic: String,
   port: Int = 80,
   retries: Option[Int] = None,
-  sslVerify: Boolean = true,
+  acceptAnyCertificate: Boolean = true,
   urlSchema: String = "https://"
 ) {
 

@@ -1,31 +1,19 @@
 package de.zalando.react.nakadi.client.providers
 
-import java.io.ByteArrayOutputStream
-
-import spray.json._
-
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.MediaTypes._
-import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.Http.OutgoingConnection
-import akka.http.scaladsl.model.HttpEntity.{ChunkStreamPart, Chunked}
-import akka.http.scaladsl.model.headers.{OAuth2BearerToken, RawHeader}
-
 import akka.stream._
 import akka.util.ByteString
 import akka.event.LoggingAdapter
 import akka.actor.{ActorContext, ActorRef}
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
+import akka.stream.scaladsl.{Flow, Framing, Sink}
 
 import de.zalando.react.nakadi.client._
-import de.zalando.react.nakadi.client.NakadiJsonProtocol._
-import de.zalando.react.nakadi.client.models.{Cursor, EventStreamBatch}
+import de.zalando.react.nakadi.client.models._
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
 
+import play.api.libs.ws._
+import play.api.libs.json.Json
+
 import scala.concurrent.Future
-import scala.annotation.tailrec
-import scala.concurrent.duration._
 
 
 object ConsumeCommand {
@@ -39,129 +27,104 @@ object ConsumeCommand {
 class ConsumeEvents(properties: ConsumerProperties,
                     actorContext: ActorContext,
                     log: LoggingAdapter,
-                    outgoingConnection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]]) {
+                    clientProvider: ClientProvider) {
 
   import actorContext.dispatcher
 
   val DefaultBufferSize = 1000
 
-  def request: Future[HttpRequest] = {
-    val streamEventUri = URI_STREAM_EVENTS.format(
-      properties.topic,
-      properties.batchLimit,
-      properties.batchFlushTimeoutInSeconds.length,
-      properties.streamLimit,
-      properties.streamTimeoutInSeconds.length,
-      properties.streamKeepAliveLimit
+  def request: Future[WSRequest] = {
+    val streamEventUri = URI_STREAM_EVENTS.format(properties.topic)
+
+    val queryParams = Seq(
+      "batch_limit" -> properties.batchLimit.toString,
+      "stream_limit" -> properties.streamLimit.toString,
+      "batch_flush_timeout" -> properties.batchFlushTimeoutInSeconds.length.toString,
+      "stream_timeout" -> properties.streamTimeoutInSeconds.length.toString,
+      "stream_keep_alive_limit" -> properties.streamKeepAliveLimit.toString
     )
 
-    val uri = s"${properties.urlSchema}${properties.server}$streamEventUri"
-    val request = HttpRequest(uri = uri)
-      .withHeaders(
-        headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())),
-        headers.Accept(MediaRange(`application/json`))
-      )
+    val headers = Seq(
+      "Content-Type" -> s"application/json; charset=UTF-8",
+      "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
+    )
 
-    cursorHeader.map(_.fold(request)(request.addHeader(_)))
+    val request = clientProvider.get
+      .url(s"${properties.urlSchema}${properties.server}$streamEventUri")
+      .withQueryString(queryParams:_*)
+      .withHeaders(headers:_*)
+
+    cursorHeader.map(_.fold(request)(request.withHeaders(_)))
   }
 
   def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Future[Unit] = {
     import ConsumeCommand._
 
-    val parse = Flow[ChunkStreamPart].map(parseJson)
-    val buff = Flow[EventStreamBatch].buffer(DefaultBufferSize, OverflowStrategy.backpressure)
-    val logger = Flow[EventStreamBatch].log("nakadi-event-stream")
-    val out = Sink.actorRefWithAck(
-      ref = receiverActorRef,
-      onInitMessage = Init,
-      ackMessage = Acknowledge,
-      onCompleteMessage = Complete,
-      onFailureMessage = x => x
-    )
+    request.flatMap(_.stream()).map { stream =>
+      stream.headers.status match {
+        case 200 =>
+          log.info(s"Successfully connected to Nakadi on ${properties.urlSchema}${properties.server}/")
 
-    val consumer = Flow[HttpResponse].map {
-      case HttpResponse(status, _, entity, _) if status.isSuccess() =>
-        log.info(s"Successfully connected to Nakadi on ${properties.urlSchema}${properties.server}/")
-        RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
-          import GraphDSL.Implicits._
-          val in = Chunked
-            .fromData(entity.contentType, entity.dataBytes)
-            .withoutSizeLimit()
-            .chunks
-
-          in ~> parse ~> buff ~> logger ~> out
-
-          ClosedShape
-        }).run()
-      case HttpResponse(status, _, entity, _) =>
-        entity.toStrict(5.seconds).map { d =>
-          log.warning(s"Request failed, response code: $status. Response body: ${d.data.decodeString("UTF-8")}")
-        }
-    }
-
-    request.flatMap { Source
-      .single(_)
-      .via(outgoingConnection)
-      .via(consumer)
-      .runWith(Sink.ignore)
-      .map(_ => ())
-      .recover {
-        case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
-        case ex => log.error(ex, "Error connecting to Nakadi")
+          stream
+            .body
+            .via(Framing.delimiter(ByteString('\n'), Int.MaxValue))
+            .via(Flow[ByteString].map(_.utf8String))
+            .via(Flow[String].log("nakadi-event-stream"))
+            .via(Flow[String].map(parse))
+            .runWith(Sink.actorRefWithAck(
+              ref = receiverActorRef,
+              onInitMessage = Init,
+              ackMessage = Acknowledge,
+              onCompleteMessage = Complete,
+              onFailureMessage = err => log.error(err, "Internal stream processing error")
+            ))
+        case errorCode =>
+          stream
+            .body
+            .map(b => log.warning(s"Request failed, response code: $errorCode. Response: ${b.decodeString("UTF-8")}"))
+            .runWith(Sink.ignore)
+            .recover {
+              case err => log.error(err, "There was an error while handling an invalid response code")
+            }
       }
+    }.map(_ => ()).recover {
+      case err =>
+        log.error(err, "Error handling Nakadi stream")
+        sys.error("Error handling Nakadi stream")
     }
   }
 
-  private def parseJson(chunk: ChunkStreamPart): EventStreamBatch = {
-    var depth: Int = 0
-    var hasOpenString: Boolean = false
-    val bout = new ByteArrayOutputStream(1024)
-
-    @tailrec
-    def recur(byteString: ByteString): String = {
-      // Cant rely on EOL because Nakadi can put it anywhere in the body
-      bout.write(byteString.head.asInstanceOf[Int])
-      byteString.head match {
-        case '"' =>
-          hasOpenString = !hasOpenString
-          recur(byteString.tail)
-        case '{' if !hasOpenString =>
-          depth += 1
-          recur(byteString.tail)
-        case '}' if !hasOpenString =>
-          depth -= 1
-          if (depth == 0 && bout.size != 0) {
-            val rawEvent = bout.toString()
-            bout.reset()
-            rawEvent
-          } else {
-            recur(byteString.tail)
-          }
-        case _ => recur(byteString.tail)
-      }
-    }
-
-    recur(chunk.data).parseJson.convertTo[EventStreamBatch]
+  def parse(body: String): Option[EventStreamBatch] = {
+    import models.JsonOps._
+    Json.parse(body).validate[EventStreamBatch].fold(
+      invalid = errors => {
+        errors.foreach(err => log.warning(s"field: ${err._1}, errors: ${err._2} in raw body $body"))
+        None
+      },
+      valid = b => Some(b)
+    )
   }
 
   private def toHeader(cursor: Cursor) = {
+    import models.JsonOps._
+
     log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for topic '${properties.topic}'")
-    RawHeader("X-Nakadi-Cursors", Seq(cursor).toJson.toString)
+    ("X-Nakadi-Cursors", Json.toJson(Seq(cursor)).toString)
   }
 
   private def readFromCommitHandler: Future[Option[Cursor]] = {
     properties
       .commitHandler
       .readCommit(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
-      Cursor(partition = offsetTracking.partitionId, offset = offsetTracking.checkpointId)
-    }).recover {
-      case ex =>
-        log.error(ex, "There was an error reading back the commit.")
-        sys.error("Commit read exception raised")
-    }
+        Cursor(partition = offsetTracking.partitionId, offset = offsetTracking.checkpointId)
+      }).recover {
+        case ex =>
+          log.error(ex, "There was an error reading back the commit.")
+          sys.error("Commit read exception raised")
+      }
   }
 
-  private def cursorHeader: Future[Option[RawHeader]] = {
+  private def cursorHeader: Future[Option[(String, String)]] = {
     properties.offset.fold(readFromCommitHandler.map(_.map(toHeader))) { offset =>
       val cursor = Cursor(partition = properties.partition, offset = offset.value)
       Future.successful(Option(toHeader(cursor)))
@@ -174,33 +137,37 @@ class ConsumeEvents(properties: ConsumerProperties,
 class ProduceEvents(properties: ProducerProperties,
                     actorContext: ActorContext,
                     log: LoggingAdapter,
-                    outgoingConnection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]]) {
+                    clientProvider: ClientProvider) {
 
   import actorContext.dispatcher
 
-  def publish(events: Seq[String], flowId: Option[String])(implicit materializer: ActorMaterializer): Unit = {
+  def request: WSRequest = {
     val postEventUri = URI_POST_EVENTS.format(properties.topic)
 
-    // FIXME - Need better way to handle this. Perhaps retries and / or return Future of success result
-    events.foreach { event =>
-      val uri = s"${properties.urlSchema}${properties.server}$postEventUri"
-      val request = HttpRequest(uri = uri, method = POST)
-        .withHeaders(headers.Authorization(OAuth2BearerToken(properties.tokenProvider.apply())))
-        .withEntity(ContentType(`application/json`), event)
+    val headers = Seq(
+      "Content-Type" -> s"application/json; charset=UTF-8",
+      "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
+    )
 
-      Source
-        .single(request)
-        .via(outgoingConnection)
-        .runWith(Sink.foreach {
-          case HttpResponse(status, headers, entity, _) if status.isSuccess() =>
-            val body = entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.utf8String)
-            log.debug(s"Got response, body: $body")
-          case HttpResponse(code, _, _, _) =>
-            log.info(s"Request failed, response code: $code")
-        }).recover {
-          case err: StreamTcpException => log.error(err, s"Error connecting to Nakadi ${err.getMessage}")
-          case ex => log.error(ex, "Error connecting to Nakadi")
-        }
-    }
+    clientProvider.get
+      .url(s"${properties.urlSchema}${properties.server}$postEventUri")
+      .withHeaders(headers:_*)
+  }
+
+  def publish(events: Seq[models.Event], flowId: Option[ids.FlowId] = None)(implicit materializer: ActorMaterializer): Unit = {
+    val req = flowId.fold(request)(flow => request.withHeaders("X-Flow-Id" -> flow.value))
+
+    Future.sequence { events.map { event =>
+      req.withMethod("POST").withBody(Json.toJson(event)).execute().map {
+        case resp if resp.status == 200 => true
+        case resp =>
+          log.warning(s"Request failed, response code: ${resp.status}. Response: ${resp.body}")
+          false
+      }.recover {
+        case err =>
+          log.error(err, "Error publishing event")
+          false
+      }
+    }}
   }
 }

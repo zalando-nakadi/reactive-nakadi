@@ -3,7 +3,6 @@ package de.zalando.react.nakadi
 
 object NakadiMessages {
 
-  type Event = String
   type Topic = String
 
   case class Offset(value: String) {
@@ -20,7 +19,7 @@ object NakadiMessages {
   object BeginOffset extends Offset("BEGIN")
 
   case class ProducerMessage(
-    eventRecord: Seq[Event],
+    eventRecord: Seq[String],
     flowId: Option[String] = None
   )
 
@@ -31,7 +30,7 @@ object NakadiMessages {
 
   case class ConsumerMessage(
     topic: Topic,
-    events: Seq[Event],
+    events: Seq[String],
     cursor: Cursor
   )
 

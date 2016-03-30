@@ -5,7 +5,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
-import de.zalando.react.nakadi.client.providers.{ConsumeEvents, ProduceEvents, HttpProvider}
+import de.zalando.react.nakadi.client.providers.{ConsumeEvents, ProduceEvents, HttpClientProvider}
 
 
 private[client] case class Properties(
@@ -13,7 +13,7 @@ private[client] case class Properties(
   securedConnection: Boolean,
   tokenProvider: () => String,
   port: Int,
-  sslVerify: Boolean,
+  acceptAnyCertificate: Boolean,
   urlSchema: String,
   consumerProperties: Option[ConsumerProperties] = None,
   producerProperties: Option[ProducerProperties] = None
@@ -21,16 +21,16 @@ private[client] case class Properties(
 
 object NakadiClientImpl {
 
-  case class EventRecord(events: Seq[String], flowId: Option[String] = None)
+  case class EventRecord(events: Seq[models.Event], flowId: Option[ids.FlowId] = None)
 
   def props(consumerProperties: ConsumerProperties) = {
     val p = Properties(
-      consumerProperties.server,
-      consumerProperties.securedConnection,
-      consumerProperties.tokenProvider,
-      consumerProperties.port,
-      consumerProperties.sslVerify,
-      consumerProperties.urlSchema,
+      server = consumerProperties.server,
+      securedConnection = consumerProperties.securedConnection,
+      tokenProvider = consumerProperties.tokenProvider,
+      port = consumerProperties.port,
+      acceptAnyCertificate = consumerProperties.acceptAnyCertificate,
+      urlSchema = consumerProperties.urlSchema,
       consumerProperties = Option(consumerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -38,12 +38,12 @@ object NakadiClientImpl {
 
   def props(producerProperties: ProducerProperties) = {
     val p = Properties(
-      producerProperties.server,
-      producerProperties.securedConnection,
-      producerProperties.tokenProvider,
-      producerProperties.port,
-      producerProperties.sslVerify,
-      producerProperties.urlSchema,
+      server = producerProperties.server,
+      securedConnection = producerProperties.securedConnection,
+      tokenProvider = producerProperties.tokenProvider,
+      port = producerProperties.port,
+      acceptAnyCertificate = producerProperties.acceptAnyCertificate,
+      urlSchema = producerProperties.urlSchema,
       producerProperties = Option(producerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -56,14 +56,7 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with NakadiClient {
 
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
-
-  // FIXME - Need general retry mechanism
-  val outgoingConnection = new HttpProvider(
-    context,
-    properties.server,
-    properties.port,
-    properties.securedConnection,
-    properties.sslVerify).outgoingConnection
+  val clientProvider = new HttpClientProvider(context, properties.server, properties.port, properties.acceptAnyCertificate)
 
   import NakadiClientImpl._
 
@@ -72,15 +65,15 @@ class NakadiClientImpl(val properties: Properties) extends Actor
     case eventRecord: EventRecord => publishEvent(eventRecord.events, eventRecord.flowId)
   }
 
-  override def publishEvent(events: Seq[String], flowId: Option[String]): Unit = {
+  override def publishEvent(events: Seq[models.Event], flowId: Option[ids.FlowId] = None): Unit = {
     val p = properties.producerProperties.getOrElse(sys.error("Producer Properties cannon be None"))
-    val produceEvents = new ProduceEvents(p, context, log, outgoingConnection)
+    val produceEvents = new ProduceEvents(p, context, log, clientProvider)
     produceEvents.publish(events, flowId)
   }
 
   override def listenForEvents(receiverActorRef: ActorRef): Unit = {
     val p = properties.consumerProperties.getOrElse(sys.error("Consumer Properties cannon be None"))
-    val consumeEvents = new ConsumeEvents(p, context, log, outgoingConnection)
+    val consumeEvents = new ConsumeEvents(p, context, log, clientProvider)
     consumeEvents.stream(receiverActorRef)
   }
 }

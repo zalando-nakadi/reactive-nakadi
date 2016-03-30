@@ -53,7 +53,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.streamKeepAliveLimit should === (0)
     props.pollParallelism should === (0)
     props.autoReconnect should === (false)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
   }
 
   it should "also be able to handle special cases" in {
@@ -89,7 +89,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.streamKeepAliveLimit should === (0)
     props.pollParallelism should === (0)
     props.autoReconnect should === (false)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("http://")
   }
 
@@ -124,7 +124,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.streamKeepAliveLimit should === (0)
     props.pollParallelism should === (0)
     props.autoReconnect should === (false)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
   }
 
   it should "also be able to handle secure connection setting" in {
@@ -146,7 +146,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.groupId should === (grouoId)
     props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("https://")
   }
 

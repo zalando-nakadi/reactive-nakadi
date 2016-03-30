@@ -62,7 +62,7 @@ case class ConsumerProperties(
   streamKeepAliveLimit: Int = 0,
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
-  sslVerify: Boolean = true,
+  acceptAnyCertificate: Boolean = true,
   urlSchema: String = "https://"
 ) {
 

@@ -1,7 +1,9 @@
 package de.zalando.react.nakadi
 
-import akka.actor.{ActorRef, ActorLogging, Props}
-import akka.stream.actor.{ActorSubscriberMessage, RequestStrategy, ActorSubscriber}
+import play.api.libs.json.Json
+
+import akka.actor.{ActorLogging, ActorRef, Props}
+import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, RequestStrategy}
 
 import de.zalando.react.nakadi.NakadiMessages._
 import de.zalando.react.nakadi.client.NakadiClientImpl.EventRecord
@@ -27,7 +29,16 @@ class NakadiActorSubscriber(producerAndProps: ReactiveNakadiProducer, requestStr
   }
 
   private def processElement(message: StringProducerMessage) = {
-    client ! EventRecord(events = message.eventRecord, flowId = message.flowId)
+    import de.zalando.react.nakadi.client.ids
+    import de.zalando.react.nakadi.client.models
+    import de.zalando.react.nakadi.client.ops.Id._
+
+    val record = EventRecord(
+      events = message.eventRecord.map(Json.parse(_).asInstanceOf[models.Event]),
+      flowId = message.flowId.map(_.id[ids.FlowRef])
+    )
+
+    client ! record
   }
 
   private def handleError(ex: Throwable) = {

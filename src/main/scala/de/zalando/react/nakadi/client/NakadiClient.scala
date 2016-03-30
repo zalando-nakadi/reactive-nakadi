@@ -6,7 +6,7 @@ import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
 
 trait NakadiClient {
 
-  def publishEvent(events: Seq[String], flowId: Option[String] = None): Unit
+  def publishEvent(events: Seq[models.Event], flowId: Option[ids.FlowId] = None): Unit
 
   def listenForEvents(receiverActorRef: ActorRef): Unit
 }

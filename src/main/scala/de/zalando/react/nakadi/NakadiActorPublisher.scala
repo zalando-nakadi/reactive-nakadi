@@ -41,12 +41,12 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
 
   override def receive: Receive = {
 
-    case ConsumeCommand.Init                      => registerSupervisor(sender())
-    case rawEvent: EventStreamBatch if isActive   => readDemandedItems(rawEvent)
-    case Request(_)                               => deliverBuf()
-    case SubscriptionTimeoutExceeded              => stop()
-    case Cancel                                   => stop()
-    case CommitOffsets(offsetMap)                 => executeCommit(offsetMap)
+    case ConsumeCommand.Init                              => registerSupervisor(sender())
+    case Some(rawEvent: EventStreamBatch) if isActive     => readDemandedItems(rawEvent)
+    case Request(_)                                       => deliverBuf()
+    case SubscriptionTimeoutExceeded                      => stop()
+    case Cancel                                           => stop()
+    case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
   }
 
   private def registerSupervisor(ref: ActorRef) = {
@@ -55,10 +55,13 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   }
 
   private def readDemandedItems(rawEvent: EventStreamBatch) = {
-    if (buf.size == MaxBufferSize) {
-      // Do nothing - we dont want to Acknowledge if buffer is full
+    val message = toMessage(rawEvent)
+
+    if (buf.size == MaxBufferSize - 1) {
+      // We don't want to acknowledge as we're at capacity
+      // We fill the last element of the buffer to be processed later
+      buf :+= message
     } else {
-      val message = toMessage(rawEvent)
       sender() ! ConsumeCommand.Acknowledge
 
       if (message.events.nonEmpty) {
@@ -113,7 +116,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   private def toMessage(rawEvent: EventStreamBatch) = {
     NakadiMessages.ConsumerMessage(
       cursor = NakadiMessages.Cursor(rawEvent.cursor.partition, Offset(rawEvent.cursor.offset)),
-      events = rawEvent.events.getOrElse(Nil),
+      events = rawEvent.events.getOrElse(Nil).map(_.toString),
       topic = topic
     )
   }

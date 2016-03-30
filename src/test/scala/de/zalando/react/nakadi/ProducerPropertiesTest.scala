@@ -24,7 +24,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.retries should === (None)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("https://")
   }
 
@@ -43,7 +43,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.retries should === (Some(5))
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("https://")
   }
 
@@ -60,7 +60,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.tokenProvider.apply should === (token)
     props.topic should === (topic)
     props.retries should === (None)
-    props.sslVerify should === (true)
+    props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("http://")
   }
 
