@@ -1,5 +1,7 @@
 package de.zalando.react.nakadi
 
+import scala.concurrent.duration._
+
 
 object ProducerProperties {
 
@@ -24,7 +26,8 @@ case class ProducerProperties(
   port: Int = 80,
   retries: Option[Int] = None,
   acceptAnyCertificate: Boolean = true,
-  urlSchema: String = "https://"
+  urlSchema: String = "https://",
+  connectionTimeout: Duration = 1000.milliseconds
 ) {
 
   def withPort(port: Int): ProducerProperties =

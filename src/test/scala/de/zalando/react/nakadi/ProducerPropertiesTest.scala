@@ -2,6 +2,8 @@ package de.zalando.react.nakadi
 
 import java.util.UUID
 
+import scala.concurrent.duration._
+
 import org.scalatest.{Matchers, FlatSpec}
 
 class ProducerPropertiesTest extends FlatSpec with Matchers {
@@ -26,6 +28,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.retries should === (None)
     props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("https://")
+    props.connectionTimeout should === (1000.milliseconds)
   }
 
   it should "also be able to handle special cases" in {
@@ -45,6 +48,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.retries should === (Some(5))
     props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("https://")
+    props.connectionTimeout should === (1000.milliseconds)
   }
 
   it should "also be able to handle unsecure connection setting" in {
@@ -62,6 +66,7 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     props.retries should === (None)
     props.acceptAnyCertificate should === (true)
     props.urlSchema should === ("http://")
+    props.connectionTimeout should === (1000.milliseconds)
   }
 
   it should "also should throw exception if invalid url schema passed in" in {

@@ -3,17 +3,17 @@ package de.zalando.react.nakadi.client.providers
 import akka.stream._
 import akka.util.ByteString
 import akka.event.LoggingAdapter
+import akka.http.scaladsl.model._
 import akka.actor.{ActorContext, ActorRef}
 import akka.stream.scaladsl.{Flow, Framing, Sink}
-
 import de.zalando.react.nakadi.client._
 import de.zalando.react.nakadi.client.models._
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
-
 import play.api.libs.ws._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 
 object ConsumeCommand {
@@ -31,8 +31,6 @@ class ConsumeEvents(properties: ConsumerProperties,
 
   import actorContext.dispatcher
 
-  val DefaultBufferSize = 1000
-
   def request: Future[WSRequest] = {
     val streamEventUri = URI_STREAM_EVENTS.format(properties.topic)
 
@@ -45,7 +43,7 @@ class ConsumeEvents(properties: ConsumerProperties,
     )
 
     val headers = Seq(
-      "Content-Type" -> s"application/json; charset=UTF-8",
+      "Content-Type" -> ContentTypes.`application/json`.toString(),
       "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
     )
 
@@ -53,6 +51,9 @@ class ConsumeEvents(properties: ConsumerProperties,
       .url(s"${properties.urlSchema}${properties.server}$streamEventUri")
       .withQueryString(queryParams:_*)
       .withHeaders(headers:_*)
+      .withRequestTimeout(Duration.Inf)
+
+    log.debug(s"Request uri: ${request.uri.toString}")
 
     cursorHeader.map(_.fold(request)(request.withHeaders(_)))
   }
@@ -62,7 +63,7 @@ class ConsumeEvents(properties: ConsumerProperties,
 
     request.flatMap(_.stream()).map { stream =>
       stream.headers.status match {
-        case 200 =>
+        case StatusCodes.OK.intValue =>
           log.info(s"Successfully connected to Nakadi on ${properties.urlSchema}${properties.server}/")
 
           stream
@@ -145,7 +146,7 @@ class ProduceEvents(properties: ProducerProperties,
     val postEventUri = URI_POST_EVENTS.format(properties.topic)
 
     val headers = Seq(
-      "Content-Type" -> s"application/json; charset=UTF-8",
+      "Content-Type" -> ContentTypes.`application/json`.toString(),
       "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
     )
 
@@ -159,7 +160,7 @@ class ProduceEvents(properties: ProducerProperties,
 
     Future.sequence { events.map { event =>
       req.withMethod("POST").withBody(Json.toJson(event)).execute().map {
-        case resp if resp.status == 200 => true
+        case resp if resp.status == StatusCodes.OK.intValue => true
         case resp =>
           log.warning(s"Request failed, response code: ${resp.status}. Response: ${resp.body}")
           false

@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
-import de.zalando.react.nakadi.NakadiMessages.{BeginOffset, ConsumerMessage}
+import de.zalando.react.nakadi.NakadiMessages.{Offset, ConsumerMessage}
 import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBHandler
 
 import scala.concurrent.duration._
@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 
 object TestApp extends App {
 
-  val token = ""
+  val token = "666ff642-c546-46fa-ae20-2bb1808a59db"
 
   val config = ConfigFactory.load()
 
@@ -29,11 +29,10 @@ object TestApp extends App {
     groupId = "some-group",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
-    offset = Some(BeginOffset),
+    offset = Some(Offset("300")),
     acceptAnyCertificate = true,
     port = 443,
-    urlSchema = "https://",
-    commitInterval = Some(10.seconds)
+    urlSchema = "https://"
   ))
 
   def throttle(msg: ConsumerMessage) = {
@@ -48,8 +47,6 @@ object TestApp extends App {
 
   Source
     .fromPublisher(publisher.publisher)
-    .map(throttle)
     .map(echo)
-    .to(Sink.ignore)
-    .run()
+    .runWith(publisher.offsetCommitSink)
 }

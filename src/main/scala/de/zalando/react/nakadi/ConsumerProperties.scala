@@ -5,7 +5,6 @@ import de.zalando.react.nakadi.commit.handlers.BaseHandler
 
 import scala.language.postfixOps
 import scala.concurrent.duration._
-import scala.concurrent.duration.FiniteDuration
 
 
 object ConsumerProperties {
@@ -53,10 +52,10 @@ case class ConsumerProperties(
   commitHandler: BaseHandler,
   port: Int = 80,
   offset: Option[Offset] = None,
-  commitInterval: Option[FiniteDuration] = None,
-  consumerTimeoutSec: FiniteDuration = 5.seconds,
+  commitInterval: FiniteDuration = 30.seconds,
+  connectionTimeout: FiniteDuration = 1000.milliseconds,
   batchLimit: Int = 0,
-  batchFlushTimeoutInSeconds: FiniteDuration = 0.seconds,
+  batchFlushTimeoutInSeconds: FiniteDuration = 30.seconds,
   streamLimit: Int = 0,
   streamTimeoutInSeconds: FiniteDuration = 0.seconds,
   streamKeepAliveLimit: Int = 0,
@@ -70,14 +69,7 @@ case class ConsumerProperties(
     * Use custom interval for auto-commit or commit flushing on manual commit.
     */
   def commitInterval(time: FiniteDuration): ConsumerProperties =
-    this.copy(commitInterval = Option(time))
-
-  /**
-    * Consumer Timeout
-    * Throw a timeout exception to the consumer if no message is available for consumption after the specified interval
-    */
-  def consumerTimeoutSec(timeInSec: FiniteDuration): ConsumerProperties =
-    this.copy(consumerTimeoutSec = timeInSec)
+    this.copy(commitInterval = time)
 
   def readFromStartOfStream(): ConsumerProperties =
     this.copy(offset = Some(BeginOffset))

@@ -44,10 +44,10 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset should === (None)
-    props.commitInterval should === (None)
-    props.consumerTimeoutSec should === (5.seconds)
+    props.commitInterval should === (30.seconds)
+    props.connectionTimeout should === (1000.milliseconds)
     props.batchLimit should === (0)
-    props.batchFlushTimeoutInSeconds should === (0.seconds)
+    props.batchFlushTimeoutInSeconds should === (30.seconds)
     props.streamLimit should === (0)
     props.streamTimeoutInSeconds should === (0.seconds)
     props.streamKeepAliveLimit should === (0)
@@ -66,7 +66,6 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       commitHandler = DummyCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
-      .consumerTimeoutSec(20.seconds)
       .readFromStartOfStream()
       .withPort(9999)
       .withUrlSchema("http://")
@@ -80,10 +79,10 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset.get.toString should === ("BEGIN")
-    props.commitInterval should === (Some(10.seconds))
-    props.consumerTimeoutSec should === (20.seconds)
+    props.commitInterval should === (10.seconds)
+    props.connectionTimeout should === (1000.milliseconds)
     props.batchLimit should === (0)
-    props.batchFlushTimeoutInSeconds should === (0.seconds)
+    props.batchFlushTimeoutInSeconds should === (30.seconds)
     props.streamLimit should === (0)
     props.streamTimeoutInSeconds should === (0.seconds)
     props.streamKeepAliveLimit should === (0)
@@ -101,9 +100,9 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,
-      topic = topic
+      topic = topic,
+      connectionTimeout = 200.milliseconds
     ).commitInterval(10.seconds)
-      .consumerTimeoutSec(20.seconds)
       .readFromStartOfStream()
 
     props.server should === (server)
@@ -115,10 +114,10 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.partition should === (partition)
     props.commitHandler should === (DummyCommitHandler)
     props.offset.get.toString should === ("BEGIN")
-    props.commitInterval should === (Some(10.seconds))
-    props.consumerTimeoutSec should === (20.seconds)
+    props.commitInterval should === (10.seconds)
+    props.connectionTimeout should === (200.milliseconds)
     props.batchLimit should === (0)
-    props.batchFlushTimeoutInSeconds should === (0.seconds)
+    props.batchFlushTimeoutInSeconds should === (30.seconds)
     props.streamLimit should === (0)
     props.streamTimeoutInSeconds should === (0.seconds)
     props.streamKeepAliveLimit should === (0)

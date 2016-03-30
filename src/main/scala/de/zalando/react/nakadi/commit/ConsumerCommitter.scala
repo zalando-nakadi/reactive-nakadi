@@ -26,9 +26,8 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
 
   import ConsumerCommitter.Contract._
 
-  val DefaultCommitInterval = 30.seconds
   val topic = consumerProperties.topic
-  val commitInterval = consumerProperties.commitInterval.getOrElse(DefaultCommitInterval)
+  val commitInterval = consumerProperties.commitInterval
   var scheduledFlush: Option[Cancellable] = None
   var partitionOffsetMap = OffsetMap()
   var committedOffsetMap = OffsetMap()

@@ -2,6 +2,7 @@ package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
+
 import de.zalando.react.nakadi.commit.OffsetMap
 import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.client.providers.ConsumeCommand

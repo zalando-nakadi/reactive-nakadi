@@ -1,11 +1,12 @@
 package de.zalando.react.nakadi.client
 
-import akka.actor.{ActorRef, Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
-import de.zalando.react.nakadi.{ProducerProperties, ConsumerProperties}
-import de.zalando.react.nakadi.client.providers.{ConsumeEvents, ProduceEvents, HttpClientProvider}
+import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
+import de.zalando.react.nakadi.client.providers.{ConsumeEvents, HttpClientProvider, ProduceEvents}
+
+import scala.concurrent.duration.Duration
 
 
 private[client] case class Properties(
@@ -15,6 +16,7 @@ private[client] case class Properties(
   port: Int,
   acceptAnyCertificate: Boolean,
   urlSchema: String,
+  connectionTimeout: Duration,
   consumerProperties: Option[ConsumerProperties] = None,
   producerProperties: Option[ProducerProperties] = None
 )
@@ -31,6 +33,7 @@ object NakadiClientImpl {
       port = consumerProperties.port,
       acceptAnyCertificate = consumerProperties.acceptAnyCertificate,
       urlSchema = consumerProperties.urlSchema,
+      connectionTimeout = consumerProperties.connectionTimeout,
       consumerProperties = Option(consumerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -44,6 +47,7 @@ object NakadiClientImpl {
       port = producerProperties.port,
       acceptAnyCertificate = producerProperties.acceptAnyCertificate,
       urlSchema = producerProperties.urlSchema,
+      connectionTimeout = producerProperties.connectionTimeout,
       producerProperties = Option(producerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -56,7 +60,10 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with NakadiClient {
 
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
-  val clientProvider = new HttpClientProvider(context, properties.server, properties.port, properties.acceptAnyCertificate)
+
+  val clientProvider = new HttpClientProvider(
+    context, properties.server, properties.port, properties.acceptAnyCertificate, properties.connectionTimeout
+  )
 
   import NakadiClientImpl._
 
