@@ -106,14 +106,14 @@ class ConsumeEvents(properties: ConsumerProperties,
     )
   }
 
-  private def toHeader(cursor: Cursor) = {
+  def toHeader(cursor: Cursor) = {
     import models.JsonOps._
 
     log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for topic '${properties.topic}'")
     ("X-Nakadi-Cursors", Json.toJson(Seq(cursor)).toString)
   }
 
-  private def readFromCommitHandler: Future[Option[Cursor]] = {
+  def readFromCommitHandler: Future[Option[Cursor]] = {
     properties
       .commitHandler
       .readCommit(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
@@ -125,7 +125,7 @@ class ConsumeEvents(properties: ConsumerProperties,
       }
   }
 
-  private def cursorHeader: Future[Option[(String, String)]] = {
+  def cursorHeader: Future[Option[(String, String)]] = {
     properties.offset.fold(readFromCommitHandler.map(_.map(toHeader))) { offset =>
       val cursor = Cursor(partition = properties.partition, offset = offset.value)
       Future.successful(Option(toHeader(cursor)))

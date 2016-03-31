@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 
 object TestApp extends App {
 
-  val token = "666ff642-c546-46fa-ae20-2bb1808a59db"
+  val token = ""
 
   val config = ConfigFactory.load()
 

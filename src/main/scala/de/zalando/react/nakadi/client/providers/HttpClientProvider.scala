@@ -16,14 +16,20 @@ trait ClientProvider {
 class HttpClientProvider(actorContext: ActorContext,
                          server: String,
                          port: Int,
-                         sslVerify: Boolean,
+                         acceptAnyCertificate: Boolean,
                          connectionTimeout: Duration)(implicit val materializer: ActorMaterializer) extends ClientProvider {
 
   override val get: AhcWSClient = {
     val builder = new DefaultAsyncHttpClientConfig
       .Builder()
       .setHandshakeTimeout(connectionTimeout.length.toInt)
-      .setAcceptAnyCertificate(sslVerify)
+      .setAcceptAnyCertificate(acceptAnyCertificate)
+
+      // Bit of a hack - set the read time out to the max
+      // so it does not stop consuming data from the stream
+      // If we want to set a time out on the stream, we should
+      // use set the relevant Nakadi parameter.
+      .setReadTimeout(Int.MaxValue)
       .build()
     new AhcWSClient(builder)
   }

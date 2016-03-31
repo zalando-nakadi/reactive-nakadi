@@ -53,7 +53,7 @@ case class ConsumerProperties(
   port: Int = 80,
   offset: Option[Offset] = None,
   commitInterval: FiniteDuration = 30.seconds,
-  connectionTimeout: FiniteDuration = 1000.milliseconds,
+  connectionTimeout: FiniteDuration = 5000.milliseconds,
   batchLimit: Int = 0,
   batchFlushTimeoutInSeconds: FiniteDuration = 30.seconds,
   streamLimit: Int = 0,
