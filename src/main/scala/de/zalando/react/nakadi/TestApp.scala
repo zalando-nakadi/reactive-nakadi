@@ -29,7 +29,6 @@ object TestApp extends App {
     groupId = "some-group",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
-    offset = Some(Offset("300")),
     acceptAnyCertificate = true,
     port = 443,
     urlSchema = "https://"

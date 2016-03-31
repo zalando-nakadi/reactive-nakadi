@@ -6,11 +6,17 @@
 
 ## TODO
 There is still a lot of work to be done on this, but some of the high level outstanding tasks include:
-- Configurable connection retries to Nakadi
-- Persistence of consumer Cursor. Nakadi plans to support consumer commits in later high level API versions
-- Pass cursor as part of request header
-- Unit / integration tests
-- Some documentation
+* [x] Persistence of consumer Cursor. Nakadi plans to support consumer commits in later high level API versions
+* [x] Pass cursor as part of request header
+* [ ] Configurable connection retries to Nakadi
+* [ ] Lease management for low level API
+  * [ ] Internal automatic partition assignment
+  * [ ] Single registered consumer per topic group
+* [ ] Integrate with Nakadi High Level API
+* [ ] Implement Zookeeper commit handler
+* [ ] Unit / integration tests
+* [ ] More documentation
+* [ ] Extend ConsumerProperties / ProducerProperties to use Akka config
 
 
 ## Example Usage
@@ -43,7 +49,10 @@ object Example extends App {
     securedConnection = true,
     tokenProvider = () => token,
     topic = "test-topic",
-    sslVerify = false,
+    partition = "0",
+    commitHandler = new DynamoDBHandler(system),
+    offset = None,  // If Offset left empty it will read from last commit
+    acceptAnyCertificate = true,
     port = 443
   ))
 
@@ -52,7 +61,7 @@ object Example extends App {
     securedConnection = true,
     tokenProvider = () => token,
     topic = "test-topic-uppercase",
-    sslVerify = false,
+    acceptAnyCertificate = true,
     port = 443
   ))
 
@@ -67,7 +76,7 @@ object Example extends App {
 
 #### Manual Commit
 
-In order to be able to achieve "at-least-once" delivery, you can use following API to obtain an additional Sink, where you can stream back messages that you processed. An underlying actor will periodically flush offsets of these messages as committed. **Note: This is commited into memory for now (testing phase). Later work will be done to extend this to use DynamoDB and/or ZooKeeper**
+In order to be able to achieve "at-least-once" delivery, you can use following API to obtain an additional Sink, where you can stream back messages that you processed. An underlying actor will periodically flush offsets of these messages as committed. **Note: Currently offsets are commited to DynamoDB. Later it will be extended to use ZooKeeper and Nakadi's own high level API**
 
 ```scala
 import akka.actor.ActorSystem
@@ -75,8 +84,8 @@ import akka.stream.scaladsl.Source
 import akka.stream.ActorMaterializer
 
 import com.typesafe.config.ConfigFactory
-import de.zalando.react.nakadi.NakadiMessages.ConsumerMessage
-import de.zalando.react.nakadi.commit.handlers.MemoryCommitHandler
+import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBHandler
+import de.zalando.react.nakadi.NakadiMessages.{Offset, ConsumerMessage}
 
 object Example extends App {
 
@@ -94,8 +103,10 @@ object Example extends App {
     securedConnection = true,
     tokenProvider = () => token,
     topic = "test-topic",
-    sslVerify = false,
-    commitHandler = Some(new MemoryCommitHandler),
+    partition = "0",
+    commitHandler = new DynamoDBHandler(system),
+    offset = Some(Offset("300")),  // If Offset left empty it will read from last commit
+    acceptAnyCertificate = true,
     port = 443
   ))
 
