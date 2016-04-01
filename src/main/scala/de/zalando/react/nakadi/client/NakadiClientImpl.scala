@@ -2,10 +2,12 @@ package de.zalando.react.nakadi.client
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
 import de.zalando.react.nakadi.client.providers.{ConsumeEvents, HttpClientProvider, ProduceEvents}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 
@@ -22,8 +24,6 @@ private[client] case class Properties(
 )
 
 object NakadiClientImpl {
-
-  case class EventRecord(events: Seq[models.Event], flowId: Option[ids.FlowId] = None)
 
   def props(consumerProperties: ConsumerProperties) = {
     val p = Properties(
@@ -62,20 +62,18 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
 
   val clientProvider = new HttpClientProvider(
-    context, properties.server, properties.port, properties.acceptAnyCertificate, properties.connectionTimeout
+    properties.server, properties.port, properties.connectionTimeout, properties.acceptAnyCertificate
   )
-
-  import NakadiClientImpl._
 
   override def receive: Receive = {
     case ConsumeCommand.Start => listenForEvents(sender())
-    case eventRecord: EventRecord => publishEvent(eventRecord.events, eventRecord.flowId)
+    case producerMessage: ProducerMessage => publishEvent(producerMessage)
   }
 
-  override def publishEvent(events: Seq[models.Event], flowId: Option[ids.FlowId] = None): Unit = {
+  override def publishEvent(producerMessage: ProducerMessage): Future[Boolean] = {
     val p = properties.producerProperties.getOrElse(sys.error("Producer Properties cannon be None"))
     val produceEvents = new ProduceEvents(p, context, log, clientProvider)
-    produceEvents.publish(events, flowId)
+    produceEvents.publish(producerMessage)
   }
 
   override def listenForEvents(receiverActorRef: ActorRef): Unit = {

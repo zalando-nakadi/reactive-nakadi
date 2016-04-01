@@ -3,7 +3,6 @@ package de.zalando.react.nakadi.commit.handlers.aws
 import akka.actor.ActorSystem
 import de.zalando.react.nakadi.commit.OffsetTracking
 
-import de.zalando.react.nakadi.NakadiMessages.Topic
 import de.zalando.react.nakadi.commit.handlers.BaseHandler
 
 import com.amazonaws.services.dynamodbv2.model._
@@ -33,13 +32,13 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
   private val keySchema = Seq(new KeySchemaElement().withAttributeName(PartitionIdKey).withKeyType(KeyType.HASH))
   private val attributeDefinitions = Seq(new AttributeDefinition().withAttributeName(PartitionIdKey).withAttributeType(ScalarAttributeType.S))
 
-  def tableName(groupId: String, topic: Topic) = s"reactive-nakadi-$topic-$groupId"
+  def tableName(groupId: String, topic: String) = s"reactive-nakadi-$topic-$groupId"
 
-  override def commitSync(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  override def commitSync(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
     put(groupId, topic, offsets)
   }
 
-  override def readCommit(groupId: String, topic: Topic, partitionId: String): Future[Option[OffsetTracking]] = Future {
+  override def readCommit(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = Future {
 
     Option(ddbClient.getTable(tableName(groupId, topic)).getItem(PartitionIdKey, partitionId)).map { i =>
       OffsetTracking(
@@ -53,7 +52,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }
   }
 
-  def put(groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
     withTable(groupId, topic, offsets) {
       case (table, true) =>
@@ -65,7 +64,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }
   }
 
-  private def handleUpdate(table: Table, groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  private def handleUpdate(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
     Future {
       offsets.map { offsetTracking =>
         val valueMap = new ValueMap()
@@ -95,7 +94,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }.map(_.foreach(outcome => log.debug(s"Update item outcome: ${outcome.getUpdateItemResult}")))
   }
 
-  private def handleOnCreated(table: Table, groupId: String, topic: Topic, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  private def handleOnCreated(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
     Future {
       offsets.map { offsetTracking =>
@@ -111,7 +110,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }.map(_.foreach(outcome => log.debug(s"Put item outcome: ${outcome.getPutItemResult}")))
   }
 
-  private def withTable(groupId: String, topic: Topic, offsets: Seq[OffsetTracking])(func: ((Table, Boolean)) => Future[Unit]): Future[Unit] = {
+  private def withTable(groupId: String, topic: String, offsets: Seq[OffsetTracking])(func: ((Table, Boolean)) => Future[Unit]): Future[Unit] = {
 
     val table = tableName(groupId, topic)
     Future {

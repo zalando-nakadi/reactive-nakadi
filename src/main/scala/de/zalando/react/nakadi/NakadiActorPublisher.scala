@@ -2,12 +2,11 @@ package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
-
 import de.zalando.react.nakadi.commit.OffsetMap
-import de.zalando.react.nakadi.client.models.EventStreamBatch
+import de.zalando.react.nakadi.client.models.{Event, EventStreamBatch}
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
+import de.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage}
 import de.zalando.react.nakadi.NakadiActorPublisher.{CommitAck, CommitOffsets}
-import de.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage, Topic}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success}
@@ -30,7 +29,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
 
   import akka.stream.actor.ActorPublisherMessage._
 
-  private val topic: Topic = consumerAndProps.properties.topic
+  private val topic: String = consumerAndProps.properties.topic
   private val groupId: String = consumerAndProps.properties.groupId
   private val client: ActorRef = consumerAndProps.nakadiClient
   private var streamSupervisor: Option[ActorRef] = None  // TODO - There must be a better way...
@@ -117,7 +116,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   private def toMessage(rawEvent: EventStreamBatch) = {
     NakadiMessages.ConsumerMessage(
       cursor = NakadiMessages.Cursor(rawEvent.cursor.partition, Offset(rawEvent.cursor.offset)),
-      events = rawEvent.events.getOrElse(Nil).map(_.toString),
+      events = rawEvent.events.getOrElse(Nil),
       topic = topic
     )
   }

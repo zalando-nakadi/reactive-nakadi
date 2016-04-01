@@ -20,6 +20,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test",
+  "org.reactivestreams" % "reactive-streams-tck" % "1.0.0" % "test",
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test"
 )
 

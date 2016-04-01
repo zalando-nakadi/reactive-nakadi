@@ -10,9 +10,23 @@ object ProducerProperties {
             tokenProvider: Option[() => String],
             topic: String): ProducerProperties = {
     if (securedConnection) {
-      new ProducerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https://")
+      new ProducerProperties(
+        server = server,
+        securedConnection = securedConnection,
+        tokenProvider = tokenProvider,
+        topic = topic,
+        port = 443,
+        urlSchema = "https://"
+      )
     } else {
-      new ProducerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 80, urlSchema = "http://")
+      new ProducerProperties(
+        server = server,
+        securedConnection = securedConnection,
+        tokenProvider = tokenProvider,
+        topic = topic,
+        port = 80,
+        urlSchema = "http://"
+      )
     }
   }
 

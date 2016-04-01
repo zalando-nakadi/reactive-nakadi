@@ -6,11 +6,14 @@ import akka.event.LoggingAdapter
 import akka.http.scaladsl.model._
 import akka.actor.{ActorContext, ActorRef}
 import akka.stream.scaladsl.{Flow, Framing, Sink}
+
 import de.zalando.react.nakadi.client._
 import de.zalando.react.nakadi.client.models._
+import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
+
 import play.api.libs.ws._
-import play.api.libs.json.Json
+import play.api.libs.json. Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -154,20 +157,22 @@ class ProduceEvents(properties: ProducerProperties,
       .withHeaders(headers:_*)
   }
 
-  def publish(events: Seq[models.Event], flowId: Option[ids.FlowId] = None)(implicit materializer: ActorMaterializer): Unit = {
-    val req = flowId.fold(request)(flow => request.withHeaders("X-Flow-Id" -> flow.value))
+  def publish(producerMessage: ProducerMessage): Future[Boolean] = {
+    import de.zalando.react.nakadi.client.models.JsonOps._
 
-    Future.sequence { events.map { event =>
-      req.withMethod("POST").withBody(Json.toJson(event)).execute().map {
-        case resp if resp.status == StatusCodes.OK.intValue => true
-        case resp =>
-          log.warning(s"Request failed, response code: ${resp.status}. Response: ${resp.body}")
-          false
-      }.recover {
-        case err =>
-          log.error(err, "Error publishing event")
-          false
-      }
-    }}
+    // FIXME - for now just take the flow Id from the head.
+    val flowId = producerMessage.eventRecords.headOption.flatMap(_.metadata.flow_id)
+    val req = flowId.fold(request)(flow => request.withHeaders("X-Flow-Id" -> flow))
+
+    req.withMethod("POST").withBody(Json.toJson(producerMessage.eventRecords)).execute().map {
+      case resp if resp.status == StatusCodes.OK.intValue => true
+      case resp =>
+        log.warning(s"Request failed, response code: ${resp.status}. Response: ${resp.body}")
+        false
+    }.recover {
+      case ex =>
+        log.error(ex, "Error while attempting to publish event")
+        false
+    }
   }
 }
