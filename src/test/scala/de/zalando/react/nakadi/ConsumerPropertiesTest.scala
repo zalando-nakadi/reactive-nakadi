@@ -29,7 +29,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     val props = ConsumerProperties(
       server = server,
       securedConnection = true,
-      tokenProvider = () => token,
+      tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,
@@ -38,7 +38,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.server should === (server)
     props.port should === (443)
     props.securedConnection should === (true)
-    props.tokenProvider.apply should === (token)
+    props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
@@ -60,7 +60,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     val props = ConsumerProperties(
       server = server,
       securedConnection = false,
-      tokenProvider = () => token,
+      tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,
@@ -73,7 +73,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.server should === (server)
     props.port should === (9999)
     props.securedConnection should === (false)
-    props.tokenProvider.apply should === (token)
+    props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
@@ -96,7 +96,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     val props = ConsumerProperties(
       server = server,
       securedConnection = false,
-      tokenProvider = () => token,
+      tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,
@@ -108,7 +108,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.server should === (server)
     props.port should === (80)
     props.securedConnection should === (false)
-    props.tokenProvider.apply should === (token)
+    props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
@@ -130,7 +130,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     val props = ConsumerProperties(
       server = server,
       securedConnection = true,
-      tokenProvider = () => token,
+      tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,
@@ -140,7 +140,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.server should === (server)
     props.port should === (443)
     props.securedConnection should === (true)
-    props.tokenProvider.apply should === (token)
+    props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
@@ -149,11 +149,21 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.urlSchema should === ("https://")
   }
 
+  it should "handle an empty token provider" in {
+    val props = ProducerProperties(
+      server = server,
+      securedConnection = true,
+      tokenProvider = None,
+      topic = topic
+    )
+    props.tokenProvider should === (None)
+  }
+
   it should "also should throw exception if invalid url schema passed in" in {
     val props = ConsumerProperties(
       server = server,
       securedConnection = false,
-      tokenProvider = () => token,
+      tokenProvider = None,
       groupId = grouoId,
       partition = partition,
       commitHandler = DummyCommitHandler,

@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 private[client] case class Properties(
   server: String,
   securedConnection: Boolean,
-  tokenProvider: () => String,
+  tokenProvider: Option[() => String],
   port: Int,
   acceptAnyCertificate: Boolean,
   urlSchema: String,

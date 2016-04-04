@@ -43,9 +43,9 @@ class ConsumeEvents(properties: ConsumerProperties,
     )
 
     val headers = Seq(
-      "Content-Type" -> ContentTypes.`application/json`.toString(),
-      "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
-    )
+      "Content-Type" -> ContentTypes.`application/json`.toString()
+    ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
+    println(headers)
 
     val request = clientProvider.get
       .url(s"${properties.urlSchema}${properties.server}$streamEventUri")
@@ -146,9 +146,8 @@ class ProduceEvents(properties: ProducerProperties,
     val postEventUri = URI_POST_EVENTS.format(properties.topic)
 
     val headers = Seq(
-      "Content-Type" -> ContentTypes.`application/json`.toString(),
-      "Authorization" -> s"Bearer ${properties.tokenProvider.apply()}"
-    )
+      "Content-Type" -> ContentTypes.`application/json`.toString()
+    ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
 
     clientProvider.get
       .url(s"${properties.urlSchema}${properties.server}$postEventUri")

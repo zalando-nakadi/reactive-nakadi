@@ -12,7 +12,7 @@ object ConsumerProperties {
   def apply(
     server: String,
     securedConnection: Boolean,
-    tokenProvider: () => String,
+    tokenProvider: Option[() => String],
     topic: String,
     groupId: String,
     partition: String,
@@ -45,7 +45,7 @@ object ConsumerProperties {
 case class ConsumerProperties(
   server: String,
   securedConnection: Boolean,
-  tokenProvider: () => String,
+  tokenProvider: Option[() => String],
   topic: String,
   groupId: String,
   partition: String,

@@ -17,7 +17,7 @@ class ReactiveNakadiSubscriberSpec extends FlatSpec {
     val nakadiProducerProperties = ProducerProperties(
       server = "localhost",
       securedConnection = false,
-      tokenProvider = () => "",
+      tokenProvider = Option(() => ""),
       topic = "test-topic",
       port = 8080
     )

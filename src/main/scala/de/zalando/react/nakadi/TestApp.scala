@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 
 object TestApp extends App {
 
-  val token = ""
+  def token() = ""
 
   val config = ConfigFactory.load()
 
@@ -24,7 +24,7 @@ object TestApp extends App {
   val publisher: PublisherWithCommitSink = nakadi.consumeWithOffsetSink(ConsumerProperties(
     server = "nakadi-sandbox.aruha-test.zalan.do",
     securedConnection = true,
-    tokenProvider = () => token,
+    tokenProvider = Option(token),
     topic = "reactive-nakadi-testing",
     groupId = "some-group",
     partition = "0",

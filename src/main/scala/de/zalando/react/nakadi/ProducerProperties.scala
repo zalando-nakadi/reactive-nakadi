@@ -7,7 +7,7 @@ object ProducerProperties {
 
   def apply(server: String,
             securedConnection: Boolean,
-            tokenProvider: () => String,
+            tokenProvider: Option[() => String],
             topic: String): ProducerProperties = {
     if (securedConnection) {
       new ProducerProperties(server = server, securedConnection = securedConnection, tokenProvider = tokenProvider, topic = topic, port = 443, urlSchema = "https://")
@@ -21,7 +21,7 @@ object ProducerProperties {
 case class ProducerProperties(
   server: String,
   securedConnection: Boolean,
-  tokenProvider: () => String,
+  tokenProvider: Option[() => String],
   topic: String,
   port: Int = 80,
   retries: Option[Int] = None,
