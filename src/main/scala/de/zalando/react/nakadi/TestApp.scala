@@ -25,26 +25,21 @@ object TestApp extends App {
   val nakadi = new ReactiveNakadi()
 
   val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
-    server = "nakadi-sandbox.aruha-test.zalan.do",
-    securedConnection = true,
-    tokenProvider = () => token,
+    server = "http://192.168.99.100:8080/",
+    tokenProvider = None,
     topic = "reactive-nakadi-testing",
     groupId = "some-group",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
-    offset = Some(Offset("333")),
-    acceptAnyCertificate = true,
-    port = 443,
-    urlSchema = "https://"
+    offset = Some(BeginOffset),
+    acceptAnyCertificate = true
   ))
 
   val subscriber: Subscriber[ProducerMessage] = nakadi.publish(ProducerProperties(
-    server = "nakadi-sandbox.aruha-test.zalan.do",
-    securedConnection = true,
-    tokenProvider = () => token,
+    server = "http://192.168.99.100:8080/",
+    tokenProvider = None,
     topic = "reactive-nakadi-testing-uppercase",
-    acceptAnyCertificate = true,
-    port = 443
+    acceptAnyCertificate = true
   ))
 
   def makeUpper(msg: StringConsumerMessage): ProducerMessage = {
@@ -55,7 +50,7 @@ object TestApp extends App {
       Event(
         data_type = "test_data",
         data_op = DataOpEnum.C,
-        data = Json.parse(s"""{"foo": "MY_UPPERCASE_VALUE"}""").as[EventPayload],
+        data = Json.parse(rawEvent).as[EventPayload],
         MetaData(
           eid = UUID.randomUUID().toString,
           occurred_at = new DateTime(),
@@ -65,47 +60,9 @@ object TestApp extends App {
     })
   }
 
-  def echo(msg: ConsumerMessage) = {
-    println(s"---: $msg")
-    msg
-  }
-
   Source
     .fromPublisher(publisher)
-//    .map(makeUpper)
-    .map(echo)
-    //.to(Sink.fromSubscriber(subscriber))
-    .to(Sink.ignore)
+    .map(makeUpper)
+    .to(Sink.fromSubscriber(subscriber))
     .run()
-
-
-//  def testingCommits: Unit = {
-//    val publisher: PublisherWithCommitSink = nakadi.consumeWithOffsetSink(ConsumerProperties(
-//      server = "nakadi-sandbox.aruha-test.zalan.do",
-//      securedConnection = true,
-//      tokenProvider = () => token,
-//      topic = "reactive-nakadi-testing",
-//      groupId = "some-group",
-//      partition = "0",
-//      commitHandler = new DynamoDBHandler(system),
-//      acceptAnyCertificate = true,
-//      port = 443,
-//      urlSchema = "https://"
-//    ))
-//
-//    def throttle(msg: ConsumerMessage) = {
-//      Thread.sleep(1000)
-//      msg
-//    }
-//
-//    def echo(msg: ConsumerMessage) = {
-//      println(s"From consumer: $msg")
-//      msg
-//    }
-//
-//    Source
-//      .fromPublisher(publisher.publisher)
-//      .map(echo)
-//      .runWith(publisher.offsetCommitSink)
-//  }
 }

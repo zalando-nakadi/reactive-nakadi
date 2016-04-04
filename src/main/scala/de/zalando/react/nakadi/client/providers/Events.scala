@@ -51,7 +51,7 @@ class ConsumeEvents(properties: ConsumerProperties,
     println(headers)
 
     val request = clientProvider.get
-      .url(s"${properties.urlSchema}${properties.server}$streamEventUri")
+      .url(s"${properties.server}$streamEventUri")
       .withQueryString(queryParams:_*)
       .withHeaders(headers:_*)
       .withRequestTimeout(Duration.Inf)
@@ -67,7 +67,7 @@ class ConsumeEvents(properties: ConsumerProperties,
     request.flatMap(_.stream()).map { stream =>
       stream.headers.status match {
         case StatusCodes.OK.intValue =>
-          log.info(s"Successfully connected to Nakadi on ${properties.urlSchema}${properties.server}/")
+          log.info(s"Successfully connected to Nakadi on $${properties.server}/")
 
           stream
             .body
@@ -153,7 +153,7 @@ class ProduceEvents(properties: ProducerProperties,
     ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
 
     clientProvider.get
-      .url(s"${properties.urlSchema}${properties.server}$postEventUri")
+      .url(s"${properties.server}$postEventUri")
       .withHeaders(headers:_*)
   }
 

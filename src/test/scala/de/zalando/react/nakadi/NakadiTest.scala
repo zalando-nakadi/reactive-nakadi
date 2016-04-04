@@ -19,17 +19,14 @@ trait NakadiTest extends BeforeAndAfterAll { this: Suite =>
 
   def defaultWatermarkStrategy = () => WatermarkRequestStrategy(10)
 
-  val nakadiHost = "localhost"
-  val nakadiPort = 8080
+  val nakadiHost = "http://localhost:8080/"
 
   val nakadi = new ReactiveNakadi()
 
   def createProducerProperties(f: FixtureParam): ProducerProperties = {
     ProducerProperties(
       server = nakadiHost,
-      port = nakadiPort,
-      securedConnection = false,
-      tokenProvider = () => "some_token",
+      tokenProvider = Option(() => "some_token"),
       topic = f.topic
     )
   }
@@ -37,9 +34,7 @@ trait NakadiTest extends BeforeAndAfterAll { this: Suite =>
   def createConsumerProperties(f: FixtureParam): ConsumerProperties = {
     ConsumerProperties(
       server = nakadiHost,
-      port = nakadiPort,
-      securedConnection = false,
-      tokenProvider = () => "some_token",
+      tokenProvider = Option(() => "some_token"),
       topic = f.topic,
       groupId = f.group,
       partition = "0", // TODO - remove this, should be auto assigned

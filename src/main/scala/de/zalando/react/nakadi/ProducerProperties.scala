@@ -5,54 +5,20 @@ import scala.concurrent.duration._
 
 object ProducerProperties {
 
-  def apply(server: String,
-            securedConnection: Boolean,
-            tokenProvider: Option[() => String],
-            topic: String): ProducerProperties = {
-    if (securedConnection) {
-      new ProducerProperties(
-        server = server,
-        securedConnection = securedConnection,
-        tokenProvider = tokenProvider,
-        topic = topic,
-        port = 443,
-        urlSchema = "https://"
-      )
-    } else {
-      new ProducerProperties(
-        server = server,
-        securedConnection = securedConnection,
-        tokenProvider = tokenProvider,
-        topic = topic,
-        port = 80,
-        urlSchema = "http://"
-      )
-    }
+  def apply(server: String, tokenProvider: Option[() => String], topic: String): ProducerProperties = {
+    new ProducerProperties(server, tokenProvider, topic)
   }
 
 }
 
 case class ProducerProperties(
   server: String,
-  securedConnection: Boolean,
   tokenProvider: Option[() => String],
   topic: String,
-  port: Int = 80,
   retries: Option[Int] = None,
   acceptAnyCertificate: Boolean = true,
-  urlSchema: String = "https://",
   connectionTimeout: Duration = 1000.milliseconds
 ) {
-
-  def withPort(port: Int): ProducerProperties =
-    this.copy(port = port)
-
-  def withUrlSchema(urlSchema: String): ProducerProperties = {
-    if (!Seq("http://", "https://").contains(urlSchema))
-      throw new IllegalArgumentException("Must pass in valid schema of http:// or https://")
-    else
-      this.copy(urlSchema = urlSchema)
-  }
 
   /**
     * messageSendMaxRetries

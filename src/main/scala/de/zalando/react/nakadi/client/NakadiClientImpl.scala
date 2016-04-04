@@ -13,11 +13,8 @@ import scala.concurrent.duration.Duration
 
 private[client] case class Properties(
   server: String,
-  securedConnection: Boolean,
   tokenProvider: Option[() => String],
-  port: Int,
   acceptAnyCertificate: Boolean,
-  urlSchema: String,
   connectionTimeout: Duration,
   consumerProperties: Option[ConsumerProperties] = None,
   producerProperties: Option[ProducerProperties] = None
@@ -28,11 +25,8 @@ object NakadiClientImpl {
   def props(consumerProperties: ConsumerProperties) = {
     val p = Properties(
       server = consumerProperties.server,
-      securedConnection = consumerProperties.securedConnection,
       tokenProvider = consumerProperties.tokenProvider,
-      port = consumerProperties.port,
       acceptAnyCertificate = consumerProperties.acceptAnyCertificate,
-      urlSchema = consumerProperties.urlSchema,
       connectionTimeout = consumerProperties.connectionTimeout,
       consumerProperties = Option(consumerProperties)
     )
@@ -42,11 +36,8 @@ object NakadiClientImpl {
   def props(producerProperties: ProducerProperties) = {
     val p = Properties(
       server = producerProperties.server,
-      securedConnection = producerProperties.securedConnection,
       tokenProvider = producerProperties.tokenProvider,
-      port = producerProperties.port,
       acceptAnyCertificate = producerProperties.acceptAnyCertificate,
-      urlSchema = producerProperties.urlSchema,
       connectionTimeout = producerProperties.connectionTimeout,
       producerProperties = Option(producerProperties)
     )
@@ -60,10 +51,7 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with NakadiClient {
 
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
-
-  val clientProvider = new HttpClientProvider(
-    properties.server, properties.port, properties.connectionTimeout, properties.acceptAnyCertificate
-  )
+  val clientProvider = new HttpClientProvider(properties.connectionTimeout, properties.acceptAnyCertificate)
 
   override def receive: Receive = {
     case ConsumeCommand.Start => listenForEvents(sender())

@@ -15,9 +15,7 @@ trait ClientProvider {
   def get: WSClient
 }
 
-class HttpClientProvider(server: String,
-                         port: Int,
-                         connectionTimeout: Duration = 5000.milliseconds,
+class HttpClientProvider(connectionTimeout: Duration = 5000.milliseconds,
                          acceptAnyCertificate: Boolean = false)(implicit val materializer: ActorMaterializer) extends ClientProvider {
 
   override val get: AhcWSClient = {

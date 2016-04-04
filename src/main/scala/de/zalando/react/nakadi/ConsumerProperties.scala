@@ -11,46 +11,30 @@ object ConsumerProperties {
 
   def apply(
     server: String,
-    securedConnection: Boolean,
     tokenProvider: Option[() => String],
     topic: String,
     groupId: String,
     partition: String,
     commitHandler: BaseHandler
   ): ConsumerProperties = {
-    if (securedConnection) { new ConsumerProperties(
+    new ConsumerProperties(
       server = server,
-      securedConnection = securedConnection,
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
       partition = partition,
-      commitHandler = commitHandler,
-      port = 443,
-      urlSchema = "https://"
-    )} else { new ConsumerProperties(
-      server = server,
-      securedConnection = securedConnection,
-      tokenProvider = tokenProvider,
-      topic = topic,
-      groupId = groupId,
-      partition = partition,
-      commitHandler = commitHandler,
-      port = 80,
-      urlSchema = "http://"
-    )}
+      commitHandler = commitHandler
+    )
   }
 }
 
 case class ConsumerProperties(
   server: String,
-  securedConnection: Boolean,
   tokenProvider: Option[() => String],
   topic: String,
   groupId: String,
   partition: String,
   commitHandler: BaseHandler,
-  port: Int = 80,
   offset: Option[Offset] = None,
   commitInterval: FiniteDuration = 30.seconds,
   connectionTimeout: FiniteDuration = 5000.milliseconds,
@@ -61,8 +45,7 @@ case class ConsumerProperties(
   streamKeepAliveLimit: Int = 0,
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
-  acceptAnyCertificate: Boolean = true,
-  urlSchema: String = "https://"
+  acceptAnyCertificate: Boolean = true
 ) {
 
   /**
@@ -73,15 +56,5 @@ case class ConsumerProperties(
 
   def readFromStartOfStream(): ConsumerProperties =
     this.copy(offset = Some(BeginOffset))
-
-  def withPort(port: Int): ConsumerProperties =
-    this.copy(port = port)
-
-  def withUrlSchema(urlSchema: String): ConsumerProperties = {
-    if (!Seq("http://", "https://").contains(urlSchema))
-      throw new IllegalArgumentException("Must pass in valid schema of http:// or https://")
-    else
-      this.copy(urlSchema = urlSchema)
-  }
 
 }
