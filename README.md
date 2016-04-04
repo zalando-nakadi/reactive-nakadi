@@ -45,24 +45,20 @@ object Example extends App {
   val nakadi = new ReactiveNakadi()
 
   val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
-    server = "some-nakadi-server",
-    securedConnection = true,
+    server = "https://some-nakadi-server/",
     tokenProvider = Option(() => token),
     topic = "test-topic",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
     offset = None,  // If Offset left empty it will read from last commit
-    acceptAnyCertificate = true,
-    port = 443
+    acceptAnyCertificate = true
   ))
 
   val subscriber: Subscriber[ProducerMessage] = nakadi.publish(ProducerProperties(
-    server = "some-nakadi-server",
-    securedConnection = true,
+    server = "https://some-nakadi-server/",
     tokenProvider = Option(() => token),
     topic = "test-topic-uppercase",
-    acceptAnyCertificate = true,
-    port = 443
+    acceptAnyCertificate = true
   ))
 
   Source
@@ -99,15 +95,13 @@ object Example extends App {
   val nakadi = new ReactiveNakadi()
 
   val publisher: PublisherWithCommitSink = nakadi.consume(ConsumerProperties(
-    server = "some-nakadi-server",
-    securedConnection = true,
+    server = "https://some-nakadi-server/",
     tokenProvider = Option(() => token),
     topic = "test-topic",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
     offset = Some(Offset("300")),  // If Offset left empty it will read from last commit
-    acceptAnyCertificate = true,
-    port = 443
+    acceptAnyCertificate = true
   ))
 
   Source
