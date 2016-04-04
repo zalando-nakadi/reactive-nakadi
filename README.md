@@ -47,7 +47,7 @@ object Example extends App {
   val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
     server = "some-nakadi-server",
     securedConnection = true,
-    tokenProvider = () => token,
+    tokenProvider = Option(() => token),
     topic = "test-topic",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
@@ -59,7 +59,7 @@ object Example extends App {
   val subscriber: Subscriber[ProducerMessage] = nakadi.publish(ProducerProperties(
     server = "some-nakadi-server",
     securedConnection = true,
-    tokenProvider = () => token,
+    tokenProvider = Option(() => token),
     topic = "test-topic-uppercase",
     acceptAnyCertificate = true,
     port = 443
@@ -101,7 +101,7 @@ object Example extends App {
   val publisher: PublisherWithCommitSink = nakadi.consume(ConsumerProperties(
     server = "some-nakadi-server",
     securedConnection = true,
-    tokenProvider = () => token,
+    tokenProvider = Option(() => token),
     topic = "test-topic",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
