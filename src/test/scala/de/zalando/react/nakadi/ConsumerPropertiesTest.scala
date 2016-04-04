@@ -2,6 +2,7 @@ package de.zalando.react.nakadi
 
 import java.util.UUID
 
+import de.zalando.react.nakadi.commit.handlers
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.duration._
@@ -22,7 +23,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
-      commitHandler = InMemoryCommitHandler,
+      commitHandler = handlers.InMemoryCommitHandler,
       topic = topic
     )
     props.server should === (server)
@@ -30,7 +31,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
-    props.commitHandler should === (InMemoryCommitHandler)
+    props.commitHandler should === (handlers.InMemoryCommitHandler)
     props.offset should === (None)
     props.commitInterval should === (30.seconds)
     props.connectionTimeout should === (5000.milliseconds)
@@ -50,7 +51,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
-      commitHandler = InMemoryCommitHandler,
+      commitHandler = handlers.InMemoryCommitHandler,
       topic = topic
     ).commitInterval(10.seconds)
       .readFromStartOfStream()
@@ -60,7 +61,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
-    props.commitHandler should === (InMemoryCommitHandler)
+    props.commitHandler should === (handlers.InMemoryCommitHandler)
     props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (10.seconds)
     props.connectionTimeout should === (5000.milliseconds)

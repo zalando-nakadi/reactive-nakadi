@@ -1,8 +1,6 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.commit.handlers
 
 import de.zalando.react.nakadi.commit.OffsetTracking
-import de.zalando.react.nakadi.commit.handlers.BaseHandler
-
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future

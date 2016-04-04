@@ -1,10 +1,12 @@
 package de.zalando.react.nakadi
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.stream.ActorMaterializer
-import akka.stream.actor.WatermarkRequestStrategy
 import akka.testkit.TestKit
+import akka.stream.ActorMaterializer
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.stream.actor.WatermarkRequestStrategy
+
 import org.scalatest.{BeforeAndAfterAll, Suite}
+import de.zalando.react.nakadi.commit.handlers.InMemoryCommitHandler
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
