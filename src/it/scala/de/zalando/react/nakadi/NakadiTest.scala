@@ -2,46 +2,62 @@ package de.zalando.react.nakadi
 
 import akka.testkit.TestKit
 import akka.stream.ActorMaterializer
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorSystem, Props}
 import akka.stream.actor.WatermarkRequestStrategy
 
-import org.scalatest.{BeforeAndAfterAll, Suite}
+import play.api.libs.json.Json
+import com.typesafe.config.{Config, ConfigFactory}
+
+import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
+import de.zalando.react.nakadi.client.NakadiClientImpl
 import de.zalando.react.nakadi.commit.handlers.InMemoryCommitHandler
+
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OptionValues}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 
-trait NakadiTest extends BeforeAndAfterAll { this: Suite =>
+trait NakadiTest extends FlatSpec
+  with BeforeAndAfterAll
+  with Matchers
+  with ScalaFutures
+  with OptionValues {
+
+  val config: Config = ConfigFactory.load()
+  val globalTimeout = 2.second
 
   implicit def system: ActorSystem
   implicit lazy val materializer = ActorMaterializer()
-
-  case class FixtureParam(topic: String, group: String, nakadi: ReactiveNakadi)
+  implicit val executionContext = scala.concurrent.ExecutionContext.global
 
   def defaultWatermarkStrategy = () => WatermarkRequestStrategy(10)
+  def dockerProvider: DockerProvider
 
-  val nakadiHost = "http://localhost:8080/"
+  val topic = "nakadi-test-topic"
+  val group = "nakadi-test-group"
 
+  val nakadiHost = s"http://${config.getString("docker.nakadi.host")}:${config.getString("docker.nakadi.port")}"
   val nakadi = new ReactiveNakadi()
 
-  def createProducerProperties(f: FixtureParam): ProducerProperties = {
+  def createProducerProperties: ProducerProperties = {
     ProducerProperties(
       server = nakadiHost,
-      tokenProvider = Option(() => "some_token"),
-      topic = f.topic
+      tokenProvider = None,
+      topic = topic
     )
   }
 
-  def createConsumerProperties(f: FixtureParam): ConsumerProperties = {
+  def createConsumerProperties: ConsumerProperties = {
     ConsumerProperties(
       server = nakadiHost,
-      tokenProvider = Option(() => "some_token"),
-      topic = f.topic,
-      groupId = f.group,
+      tokenProvider = None,
+      topic = topic,
+      groupId = group,
       partition = "0", // TODO - remove this, should be auto assigned
       commitHandler = InMemoryCommitHandler
-    ).commitInterval(2.seconds)
+    ).commitInterval(2.seconds).readFromStartOfStream()
   }
 
   def createSubscriberProps(nakadi: ReactiveNakadi, producerProperties: ProducerProperties): Props = {
@@ -50,26 +66,6 @@ trait NakadiTest extends BeforeAndAfterAll { this: Suite =>
 
   def createConsumerActorProps(nakadi: ReactiveNakadi, consumerProperties: ConsumerProperties): Props = {
     nakadi.consumerActorProps(consumerProperties)(system)
-  }
-
-  def createTestSubscriber(): ActorRef = {
-    system.actorOf(Props(new ReactiveTestSubscriber))
-  }
-
-  def stringSubscriber(f: FixtureParam) = {
-    f.nakadi.publish(createProducerProperties(f))(system)
-  }
-
-  def stringSubscriberActor(f: FixtureParam) = {
-    f.nakadi.producerActor(createProducerProperties(f))(system)
-  }
-
-  def stringConsumer(f: FixtureParam) = {
-    f.nakadi.consume(createConsumerProperties(f))(system)
-  }
-
-  def stringConsumerWithOffsetSink(f: FixtureParam) = {
-    f.nakadi.consumeWithOffsetSink(createConsumerProperties(f))(system)
   }
 
   def newNakadi(): ReactiveNakadi = new ReactiveNakadi()
@@ -87,8 +83,51 @@ trait NakadiTest extends BeforeAndAfterAll { this: Suite =>
   }
 
   override def afterAll(): Unit = {
+    dockerProvider.stop
     materializer.shutdown()
     TestKit.shutdownActorSystem(system)
+  }
+
+  override def beforeAll(): Unit = {
+    dockerProvider.start
+    createTopic()
+  }
+
+  private def createTopic(): Unit = {
+    import de.zalando.react.nakadi.client.Properties
+    import de.zalando.react.nakadi.client.models.{EventType, EventTypeCategoryEnum}
+
+    val properties = Properties(
+      server = nakadiHost,
+      tokenProvider = None,
+      acceptAnyCertificate = true,
+      connectionTimeout = globalTimeout
+    )
+
+    val rawSchema =
+      """
+        |{
+        |   "type": "json_schema",
+        |   "schema": "{\"type\": \"object\", \"properties\": {\"foo\": {\"type\": \"string\"}}, \"required\": [\"foo\"]}"
+        |}
+      """.stripMargin
+
+    val message = EventTypeMessage(EventType(
+      name = topic,
+      statistics = None,
+      partitionKeyFields = Nil,
+      dataKeyFields = None,
+      owningApplication = "nakadi-test",
+      validationStrategies = None,
+      partitionResolutionStrategy = None,
+      schema = Option(Json.parse(rawSchema)),
+      category = EventTypeCategoryEnum.Data,
+      enrichmentStrategies = Seq("metadata_enrichment")
+    ))
+
+    system.actorOf(Props(new NakadiClientImpl(properties))) ! message
+
+    Thread.sleep(3000) // Hack - sleep a few seconds to wait for event type to be created
   }
 
 }

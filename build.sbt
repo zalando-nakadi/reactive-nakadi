@@ -7,8 +7,22 @@ scalaVersion := "2.11.7"
 val akkaVersion = "2.4.2"
 val akkaExperimentalVersion = "2.0.3"
 
+parallelExecution in ThisBuild := false
+
 resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
+
+val customItSettings = Defaults.itSettings ++ Seq(
+  scalaSource := baseDirectory.value / "src" / "it",
+  resourceDirectory := baseDirectory.value / "src" / "it" / "resources",
+  fork in test := true,
+  parallelExecution := false
+)
+
+lazy val root = (project in file("."))
+  .configs(IntegrationTest)
+  .settings(inConfig(IntegrationTest)(customItSettings): _*)
+
 
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
@@ -19,9 +33,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-  "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test",
-  "org.reactivestreams" % "reactive-streams-tck" % "1.0.0" % "test",
-  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test"
+  "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test, it",
+  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
 mainClass in assembly := Some("de.zalando.react.nakadi.TestApp")
