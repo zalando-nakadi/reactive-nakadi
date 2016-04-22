@@ -1,6 +1,6 @@
 package de.zalando.react.nakadi
 
-import de.zalando.react.nakadi.client.models.Event
+import de.zalando.react.nakadi.client.models.{EventType, Event}
 
 
 object NakadiMessages {
@@ -18,9 +18,8 @@ object NakadiMessages {
 
   object BeginOffset extends Offset("BEGIN")
 
-  // Producer message encapsulates the event structure
-  // In the future this is likely to change
   case class ProducerMessage(eventRecords: Seq[Event])
+  case class EventTypeMessage(eventType: EventType)
 
   case class Cursor(
     partition: String,

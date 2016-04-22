@@ -28,3 +28,23 @@ case class EventStreamBatch(
   cursor: Cursor,
   events: Option[Seq[Event]] = None
 )
+
+case class EventTypeStatistics(
+  expectedWriteRate: Option[Long] = None,
+  messageSize: Option[Long] = None,
+  readParallelism: Option[Long] = None,
+  writeParallelism: Option[Long] = None
+)
+
+case class EventType(
+  name: String,
+  statistics: Option[EventTypeStatistics] = None,
+  partitionKeyFields: Seq[String],
+  dataKeyFields: Option[Seq[String]] = None,
+  owningApplication: String,
+  validationStrategies: Option[Seq[String]] = None,
+  partitionResolutionStrategy: Option[play.api.libs.json.JsValue] = None,
+  schema: Option[play.api.libs.json.JsValue] = None,
+  category: EventTypeCategoryEnum.Category,
+  enrichmentStrategies: Seq[String]
+)

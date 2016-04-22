@@ -73,4 +73,44 @@ object JsonOps {
     (__ \ "events").writeNullable[Seq[Event]]
   )(unlift(EventStreamBatch.unapply))
 
+  implicit val readsEventTypeStatistics: Reads[EventTypeStatistics] = (
+    (__ \ "expected_write_rate").readNullable[Long] and
+    (__ \ "message_size").readNullable[Long] and
+    (__ \ "read_parallelism").readNullable[Long] and
+    (__ \ "write_parallelism").readNullable[Long]
+  )(EventTypeStatistics)
+
+  implicit val writesEventTypeStatistics: Writes[EventTypeStatistics] = (
+    (__ \ "expected_write_rate").writeNullable[Long] and
+    (__ \ "message_size").writeNullable[Long] and
+    (__ \ "read_parallelism").writeNullable[Long] and
+    (__ \ "write_parallelism").writeNullable[Long]
+  )(unlift(EventTypeStatistics.unapply))
+
+  implicit val readsEventType: Reads[EventType] = (
+    (__ \ "name").read[String] and
+    (__ \ "statistics").readNullable[EventTypeStatistics] and
+    (__ \ "partition_key_fields").read[Seq[String]] and
+    (__ \ "data_key_fields").readNullable[Seq[String]] and
+    (__ \ "owning_application").read[String] and
+    (__ \ "validation_strategies").readNullable[Seq[String]] and
+    (__ \ "partition_resolution_strategy").readNullable[play.api.libs.json.JsValue] and
+    (__ \ "schema").readNullable[play.api.libs.json.JsValue] and
+    (__ \ "category").read[String].map(EventTypeCategoryEnum.apply) and
+    (__ \ "enrichment_strategies").read[Seq[String]]
+  )(EventType)
+
+  implicit val writesEventType: Writes[EventType] = (
+    (__ \ "name").write[String] and
+    (__ \ "statistics").writeNullable[EventTypeStatistics] and
+    (__ \ "partition_key_fields").write[Seq[String]] and
+    (__ \ "data_key_fields").writeNullable[Seq[String]] and
+    (__ \ "owning_application").write[String] and
+    (__ \ "validation_strategies").writeNullable[Seq[String]] and
+    (__ \ "partition_resolution_strategy").writeNullable[play.api.libs.json.JsValue] and
+    (__ \ "schema").writeNullable[play.api.libs.json.JsValue] and
+    (__ \ "category").write[String].contramap(EventTypeCategoryEnum.contrapply) and
+    (__ \ "enrichment_strategies").write[Seq[String]]
+  )(unlift(EventType.unapply))
+
 }

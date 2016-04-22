@@ -30,3 +30,23 @@ object DataOpEnum {
 
   def contrapply(o: DataOp) = o.name
 }
+
+object EventTypeCategoryEnum {
+  sealed trait Category extends NamedEnum
+
+  case object Undefined extends Category { override val name = "undefined" }
+  case object Data extends Category { override val name = "data" }
+  case object Business extends Category { override val name = "business" }
+  case class UnknownValue(value: String) extends Category { override val name = s"UnknownValue($value)" }
+
+  def apply(name: String): Category = name match {
+    case Undefined.name => Undefined
+    case Data.name => Data
+    case Business.name => Business
+    case _ => UnknownValue(name)
+  }
+
+  def contrapply(o: Category) = o.name
+}
+
+

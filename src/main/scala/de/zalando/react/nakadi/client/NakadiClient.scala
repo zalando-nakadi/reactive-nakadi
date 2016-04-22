@@ -1,13 +1,15 @@
 package de.zalando.react.nakadi.client
 
 import akka.actor.{ActorRef, ActorSystem}
-import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
+import de.zalando.react.nakadi.NakadiMessages.{ProducerMessage, EventTypeMessage}
 
 import scala.concurrent.Future
 
 
 trait NakadiClient {
+
+  def postEventType(eventTypeMessage: EventTypeMessage): Future[Boolean]
 
   def publishEvent(producerMessage: ProducerMessage): Future[Boolean]
 

@@ -6,14 +6,12 @@ import akka.event.LoggingAdapter
 import akka.http.scaladsl.model._
 import akka.actor.{ActorContext, ActorRef}
 import akka.stream.scaladsl.{Flow, Framing, Sink}
-
 import de.zalando.react.nakadi.client._
 import de.zalando.react.nakadi.client.models._
-import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
+import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
-
 import play.api.libs.ws._
-import play.api.libs.json. Json
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -27,15 +25,26 @@ object ConsumeCommand {
 }
 
 
+trait BaseProvider {
+  def uri: String
+  def request: Future[WSRequest]
+}
+
+
 class ConsumeEvents(properties: ConsumerProperties,
                     actorContext: ActorContext,
                     log: LoggingAdapter,
-                    clientProvider: ClientProvider) {
+                    clientProvider: ClientProvider) extends BaseProvider {
 
   import actorContext.dispatcher
 
-  def request: Future[WSRequest] = {
-    val streamEventUri = URI_STREAM_EVENTS.format(properties.topic)
+  override val uri = {
+    val uri = s"${properties.server}${URI_STREAM_EVENTS.format(properties.topic)}"
+    log.debug(s"Making GET request to: $uri")
+    uri
+  }
+
+  override lazy val request: Future[WSRequest] = {
 
     val queryParams = Seq(
       "batch_limit" -> properties.batchLimit.toString,
@@ -48,15 +57,12 @@ class ConsumeEvents(properties: ConsumerProperties,
     val headers = Seq(
       "Content-Type" -> ContentTypes.`application/json`.toString()
     ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
-    println(headers)
 
     val request = clientProvider.get
-      .url(s"${properties.server}$streamEventUri")
+      .url(uri)
       .withQueryString(queryParams:_*)
       .withHeaders(headers:_*)
       .withRequestTimeout(Duration.Inf)
-
-    log.debug(s"Request uri: ${request.uri.toString}")
 
     cursorHeader.map(_.fold(request)(request.withHeaders(_)))
   }
@@ -64,10 +70,10 @@ class ConsumeEvents(properties: ConsumerProperties,
   def stream(receiverActorRef: ActorRef)(implicit materializer: ActorMaterializer): Future[Unit] = {
     import ConsumeCommand._
 
-    request.flatMap(_.stream()).map { stream =>
+    request.flatMap { r => log.debug(s"Headers: ${r.headers}. Params: ${r.queryString}"); r.stream() }.map { stream =>
       stream.headers.status match {
         case StatusCodes.OK.intValue =>
-          log.info(s"Successfully connected to Nakadi on $${properties.server}/")
+          log.info(s"Successfully connected to Nakadi on ${properties.server}")
 
           stream
             .body
@@ -85,7 +91,7 @@ class ConsumeEvents(properties: ConsumerProperties,
         case errorCode =>
           stream
             .body
-            .map(b => log.warning(s"Request failed, response code: $errorCode. Response: ${b.decodeString("UTF-8")}"))
+            .map(b => log.warning(s"Request failed for $uri, response code: $errorCode. Response: ${b.decodeString("UTF-8")}"))
             .runWith(Sink.ignore)
             .recover {
               case err => log.error(err, "There was an error while handling an invalid response code")
@@ -141,38 +147,82 @@ class ConsumeEvents(properties: ConsumerProperties,
 class ProduceEvents(properties: ProducerProperties,
                     actorContext: ActorContext,
                     log: LoggingAdapter,
-                    clientProvider: ClientProvider) {
+                    clientProvider: ClientProvider) extends BaseProvider {
 
   import actorContext.dispatcher
 
-  def request: WSRequest = {
-    val postEventUri = URI_POST_EVENTS.format(properties.topic)
+  override val uri = {
+    val uri = s"${properties.server}${URI_POST_EVENTS.format(properties.topic)}"
+    log.debug(s"Making POST request to: $uri")
+    uri
+  }
+
+  override val request: Future[WSRequest] = {
 
     val headers = Seq(
       "Content-Type" -> ContentTypes.`application/json`.toString()
     ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
 
-    clientProvider.get
-      .url(s"${properties.server}$postEventUri")
-      .withHeaders(headers:_*)
+    Future.successful(clientProvider.get.url(uri).withHeaders(headers:_*))
   }
 
   def publish(producerMessage: ProducerMessage): Future[Boolean] = {
     import de.zalando.react.nakadi.client.models.JsonOps._
 
-    // FIXME - for now just take the flow Id from the head.
-    val flowId = producerMessage.eventRecords.headOption.flatMap(_.metadata.flow_id)
-    val req = flowId.fold(request)(flow => request.withHeaders("X-Flow-Id" -> flow))
+    request.flatMap { req =>
+      // FIXME - for now just take the flow Id from the head.
+      val flowId = producerMessage.eventRecords.headOption.flatMap(_.metadata.flow_id)
+      val actualRequest = flowId.fold(req)(flow => req.withHeaders("X-Flow-Id" -> flow))
 
-    req.withMethod("POST").withBody(Json.toJson(producerMessage.eventRecords)).execute().map {
-      case resp if resp.status == StatusCodes.OK.intValue => true
-      case resp =>
-        log.warning(s"Request failed, response code: ${resp.status}. Response: ${resp.body}")
-        false
-    }.recover {
-      case ex =>
-        log.error(ex, "Error while attempting to publish event")
-        false
+      actualRequest.post(Json.toJson(producerMessage.eventRecords)).map {
+        case resp if resp.status == StatusCodes.OK.intValue => true
+        case resp =>
+          log.warning(s"Request failed for $uri, response code: ${resp.status}. Response: ${resp.body}")
+          false
+      }.recover {
+        case ex =>
+          log.error(ex, "Error while attempting to publish event")
+          false
+      }
+    }
+  }
+}
+
+class PostEventType(properties: Properties,
+                    actorContext: ActorContext,
+                    log: LoggingAdapter,
+                    clientProvider: ClientProvider) extends BaseProvider {
+  import actorContext.dispatcher
+
+  override val uri = {
+    val uri = s"${properties.server}$URI_POST_EVENT_TYPES"
+    log.debug(s"Making POST request to: $uri")
+    uri
+  }
+
+  override val request: Future[WSRequest] = {
+
+    val headers = Seq(
+      "Content-Type" -> ContentTypes.`application/json`.toString()
+    ) ++ properties.tokenProvider.map(tok => "Authorization" -> s"Bearer ${tok.apply()}")
+
+    Future.successful(clientProvider.get.url(uri).withHeaders(headers:_*))
+  }
+
+  def post(eventTypeMessage: EventTypeMessage): Future[Boolean] = {
+    import de.zalando.react.nakadi.client.models.JsonOps._
+
+    request.flatMap { req =>
+      req.post(Json.toJson(eventTypeMessage.eventType)).map {
+        case resp if resp.status == StatusCodes.Created.intValue => true
+        case resp =>
+          log.warning(s"Request failed for $uri, response code: ${resp.status}. Response: ${resp.body}")
+          false
+      }.recover {
+        case ex =>
+          log.error(ex, "Error while attempting to create event type")
+          false
+      }
     }
   }
 }

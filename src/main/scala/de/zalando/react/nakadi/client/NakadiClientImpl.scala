@@ -2,16 +2,16 @@ package de.zalando.react.nakadi.client
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-import de.zalando.react.nakadi.NakadiMessages.ProducerMessage
-import de.zalando.react.nakadi.client.providers.ConsumeCommand
+import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
+import de.zalando.react.nakadi.client.models.EventType
+import de.zalando.react.nakadi.client.providers._
 import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
-import de.zalando.react.nakadi.client.providers.{ConsumeEvents, HttpClientProvider, ProduceEvents}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 
-private[client] case class Properties(
+case class Properties(
   server: String,
   tokenProvider: Option[() => String],
   acceptAnyCertificate: Boolean,
@@ -56,6 +56,12 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   override def receive: Receive = {
     case ConsumeCommand.Start => listenForEvents(sender())
     case producerMessage: ProducerMessage => publishEvent(producerMessage)
+    case eventTypeMessage: EventTypeMessage => postEventType(eventTypeMessage: EventTypeMessage)
+  }
+
+  override def postEventType(eventTypeMessage: EventTypeMessage): Future[Boolean] = {
+    val postEvents = new PostEventType(properties, context, log, clientProvider)
+    postEvents.post(eventTypeMessage)
   }
 
   override def publishEvent(producerMessage: ProducerMessage): Future[Boolean] = {
