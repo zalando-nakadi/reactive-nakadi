@@ -6,9 +6,6 @@ scalaVersion := "2.11.7"
 
 val akkaVersion = "2.4.2"
 
-coverageEnabled := true
-coverageEnabled in IntegrationTest := true
-
 parallelExecution in ThisBuild := false
 
 resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
