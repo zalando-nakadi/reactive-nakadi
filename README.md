@@ -18,6 +18,17 @@ There is still a lot of work to be done on this, but some of the high level outs
 * [ ] More documentation
 * [ ] Extend ConsumerProperties / ProducerProperties to use Akka config
 
+## Tests
+To run unit tests:
+```
+$ sbt clean test
+```
+
+To run integration tests with [Nakadi](https://github.com/zalando/nakadi). You need to state which IP address Docker is running on. If on a mac, this can be found out using `docker-machine ls`. Nakadi is cloned down, and it and all of its dependencies are run in Docker. Two containers are run, `local-storages` which contains Postgres, Kafka and Zookeeper. The other container is Nakadi itself:
+```
+$ export DOCKER_IP=127.0.0.1
+$ sbt clean it:test
+```
 
 ## Example Usage
 
