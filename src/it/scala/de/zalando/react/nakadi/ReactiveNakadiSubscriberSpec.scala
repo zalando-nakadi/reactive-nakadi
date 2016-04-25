@@ -20,8 +20,6 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
   override val dockerProvider: DockerProvider = new NakadiDockerProvider(config)
   override implicit val system: ActorSystem = ActorSystem("ReactiveNakadiSubscriberSpec")
 
-  def producerProperties = createProducerProperties
-  def consumerProperties = createConsumerProperties
   def generateEvent = {
     Event(
       data_type = "test_data_type",
@@ -44,16 +42,16 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     event1.metadata.event_type should === (Some(topic))
   }
 
-  "ReactiveNakadiSubscriber" should "consume a single messages" in {
+  "Reactive-Nakadi Subscriber" should "consume a single messages" in {
     val event = generateEvent
-    val nakadiPublisher = nakadi.consume(
-      consumerProperties.copy(batchFlushTimeoutInSeconds = 10.seconds, streamTimeoutInSeconds = 10.seconds)
-    )
+
+    // Create the publisher (read from Nakadi stream)
+    val nakadiPublisher = nakadi.consume(createConsumerProperties)
     val resultFut = Source.fromPublisher(nakadiPublisher).runWith(Sink.head)
 
-    val nakadiSubscriber = nakadi.publish(producerProperties)
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
     val sink = Sink.fromSubscriber(nakadiSubscriber)
-
     TestSource.probe[Seq[Event]]
       .map(ProducerMessage(_))
       .toMat(sink)(Keep.left)
@@ -61,30 +59,248 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
       .sendNext(Seq(event))
 
     val result = Await.result(resultFut, 30.seconds)
-    println("validate single messages")
     validateEvent(result.events.head, event)
     result.topic should === (topic)
-    result.cursor should === (Cursor(partition = "0", offset = Offset(value = "0")))
+    result.cursor should === (Cursor(partition = "0", offset = Offset("0")))
   }
 
   it should "consume multiple messages as separate events" in {
-    val events = (1 to 10).map(_ => generateEvent)
 
-    val nakadiPublisher = nakadi.consume(
-      consumerProperties.copy(batchFlushTimeoutInSeconds = 10.seconds, streamTimeoutInSeconds = 10.seconds)
-    )
-    Source.fromPublisher(nakadiPublisher).runForeach { v =>
-      println(v)
-    }
+    // Create the publisher (read from Nakadi stream)
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(offset = Some(Offset("0"))))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(10))
+      .runWith(Sink.seq)
 
-    val nakadiSubscriber = nakadi.publish(producerProperties)
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
     val sink = Sink.fromSubscriber(nakadiSubscriber)
-
     val probe = TestSource.probe[Seq[Event]]
       .map(ProducerMessage(_))
       .toMat(sink)(Keep.left)
       .run()
 
-    events.foreach(ev => probe.sendNext(Seq(ev)))
+    val events = (1 to 10).map { _ =>
+      val event = generateEvent
+      probe.sendNext(Seq(event))
+      event.metadata.eid -> event
+    }.toMap
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.zip(Stream from 1).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
+  }
+
+  it should "consume multiple events with a single request" in {
+
+    // Create the publisher (read from Nakadi stream)
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(offset = Some(Offset("10"))))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(10))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 10).map { _ =>
+      val event = generateEvent
+      event.metadata.eid -> event
+    }.toMap
+    probe.sendNext(events.values.to[collection.immutable.Seq])
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.zip(Stream from 11).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
+  }
+
+  it should "consume a thousand events" in {
+
+    // Create the publisher (read from Nakadi stream)
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(offset = Some(Offset("20"))))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(1000))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 1000).map { _ =>
+      val event = generateEvent
+      event.metadata.eid -> event
+    }.toMap
+    probe.sendNext(events.values.to[collection.immutable.Seq])
+
+    val result = Await.result(resultFut, 45.seconds)
+    result.zip(Stream from 21).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
+  }
+
+  "Nakadi Parameters" should "consume 20 events over 2 seperate messages given batch_limit is set to 10, and batch_flush_timeout it set to 600" in {
+
+    // Create the publisher (read from Nakadi stream)
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(
+      batchLimit = 10,
+      batchFlushTimeoutInSeconds = 600.seconds,
+      offset = Some(Offset("1020"))
+    ))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(2))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 20).map { _ =>
+      val event = generateEvent
+      probe.sendNext(Seq(event))
+      event.metadata.eid -> event
+    }.toMap
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.size should === (2)
+    result.head.topic should === (topic)
+    result.head.cursor should === (Cursor(partition = "0", offset = Offset("1030")))
+    result.head.events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
+
+    result(1).topic should === (topic)
+    result(1).cursor should === (Cursor(partition = "0", offset = Offset("1040")))
+    result(1).events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
+  }
+
+  it should "consume 10 separate events given stream_limit is set to 10, and then close the connection" in {
+
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(
+      streamLimit = 10,
+      offset = Some(Offset("1040"))
+    ))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(10))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 10).map { _ =>
+      val event = generateEvent
+      probe.sendNext(Seq(event))
+      event.metadata.eid -> event
+    }.toMap
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.size should === (10)
+    result.zip(Stream.range(1041, 1050)).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
+  }
+
+  it should "consume 10 events then close the connection, given stream_keep_alive_limit is set to 5" in {
+
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(
+      streamKeepAliveLimit = 5,
+      offset = Some(Offset("1050"))
+    ))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(10))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 10).map { _ =>
+      val event = generateEvent
+      probe.sendNext(Seq(event))
+      event.metadata.eid -> event
+    }.toMap
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.size should === (10)
+    result.zip(Stream.range(1051, 1060)).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
+  }
+
+  it should "consume 10 events then close the connection after 10 seconds, given stream_timeout is set to 10" in {
+
+    val nakadiPublisher = nakadi.consume(createConsumerProperties.copy(
+      streamTimeoutInSeconds = 15.seconds,
+      batchFlushTimeoutInSeconds = 10.seconds,
+      offset = Some(Offset("1060"))
+    ))
+    val resultFut = Source
+      .fromPublisher(nakadiPublisher)
+      .via(Flow[ConsumerMessage].take(10))
+      .runWith(Sink.seq)
+
+    // Create the subscriber (write to Nakadi)
+    val nakadiSubscriber = nakadi.publish(createProducerProperties)
+    val sink = Sink.fromSubscriber(nakadiSubscriber)
+    val probe = TestSource.probe[Seq[Event]]
+      .map(ProducerMessage(_))
+      .toMat(sink)(Keep.left)
+      .run()
+
+    val events = (1 to 10).map { _ =>
+      val event = generateEvent
+      probe.sendNext(Seq(event))
+      event.metadata.eid -> event
+    }.toMap
+
+    val result = Await.result(resultFut, 30.seconds)
+    result.size should === (10)
+    result.zip(Stream.range(1061, 1070)).foreach {
+      case (res, idx) =>
+        res.topic should === (topic)
+        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        validateEvent(res.events.head, events(res.events.head.metadata.eid))
+    }
   }
 }

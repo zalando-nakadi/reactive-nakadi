@@ -38,7 +38,8 @@ trait NakadiTest extends FlatSpec
   val topic = "nakadi-test-topic"
   val group = "nakadi-test-group"
 
-  val nakadiHost = s"http://${config.getString("docker.nakadi.host")}:${config.getString("docker.nakadi.port")}"
+  val dockerIp = scala.util.Properties.envOrElse("DOCKER_IP", config.getString("docker.nakadi.host"))
+  val nakadiHost = s"http://$dockerIp:${config.getString("docker.nakadi.port")}"
   val nakadi = new ReactiveNakadi()
 
   def createProducerProperties: ProducerProperties = {
@@ -125,9 +126,9 @@ trait NakadiTest extends FlatSpec
       enrichmentStrategies = Seq("metadata_enrichment")
     ))
 
-    system.actorOf(Props(new NakadiClientImpl(properties))) ! message
+    system.actorOf(Props(new NakadiClientImpl(properties))) ! message // FIME - implement some sort of acknowledgement
 
-    Thread.sleep(3000) // Hack - sleep a few seconds to wait for event type to be created
+    Thread.sleep(5000) // Hack - sleep a few seconds to wait for event type to be created
   }
 
 }
