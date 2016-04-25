@@ -11,9 +11,7 @@ scala:
    - 2.11.7
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean coverage coverageReport test
-  - sbt ++$TRAVIS_SCALA_VERSION clean coverage coverageReport it:test
-  - sbt ++$TRAVIS_SCALA_VERSION coverageAggregate
+  - sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test coverageReport coverageAggregate
 
 after_success:
   - sbt coveralls

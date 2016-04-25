@@ -5,7 +5,9 @@ version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.7"
 
 val akkaVersion = "2.4.2"
-val akkaExperimentalVersion = "2.0.3"
+
+coverageEnabled := true
+coverageEnabled in IntegrationTest := true
 
 parallelExecution in ThisBuild := false
 
@@ -31,7 +33,7 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.60",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test, it",
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
