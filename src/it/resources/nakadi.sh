@@ -9,6 +9,7 @@ GIT=`which git`
 DIRECTORY=/tmp/nakadi
 REPO="https://github.com/zalando/nakadi"
 NAKADI_PORT="8080"
+NAKADI_ALIVE_TIMEOUT=120
 
 function validate {
 
@@ -51,9 +52,15 @@ function start_nakadi {
     cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
+    poll_counter=0
     until $(curl --silent --output /dev/null http://$DOCKER_IP:8080/health); do
         sleep 1
         echo -n ". "
+        poll_counter=$((poll_counter+1))
+        [ "$poll_counter" -eq "$NAKADI_ALIVE_TIMEOUT" ] && {
+            echo -e "Nakadi wait timeout reached ${FAIL}✗${RESET}"
+            exit 1;
+        }
     done;
     echo -e "Nakadi started ${OK}✔${RESET}"
 }
