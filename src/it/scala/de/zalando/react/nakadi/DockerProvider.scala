@@ -2,7 +2,7 @@ package de.zalando.react.nakadi
 
 import com.typesafe.config.Config
 
-import sys.process.Process
+import sys.process._
 
 
 trait DockerProvider {
@@ -12,17 +12,8 @@ trait DockerProvider {
 
 class NakadiDockerProvider(config: Config) extends DockerProvider {
 
-  override def start: Int = {
-    Process(
-      Seq("src/it/resources/nakadi.sh", "start"),
-      new java.io.File("."),
-      "DOCKER_IP" -> config.getString("docker.nakadi.host")) !
-  }
+  override def start: Int = "src/it/resources/nakadi.sh start" !
 
-  override def stop: Int = {
-    Process(
-      Seq("src/it/resources/nakadi.sh", "stop"),
-      new java.io.File("."),
-      "DOCKER_IP" -> config.getString("docker.nakadi.host")) !
-  }
+  override def stop: Int = "src/it/resources/nakadi.sh stop" !
+
 }

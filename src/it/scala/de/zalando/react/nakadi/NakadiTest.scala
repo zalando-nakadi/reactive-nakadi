@@ -38,8 +38,7 @@ trait NakadiTest extends FlatSpec
   val topic = "nakadi-test-topic"
   val group = "nakadi-test-group"
 
-  val dockerIp = scala.util.Properties.envOrElse("DOCKER_IP", config.getString("docker.nakadi.host"))
-  val nakadiHost = s"http://$dockerIp:${config.getString("docker.nakadi.port")}"
+  val nakadiHost = s"http://${sys.env("DOCKER_IP")}:${config.getString("docker.nakadi.port")}"
   val nakadi = new ReactiveNakadi()
 
   def createProducerProperties: ProducerProperties = {
