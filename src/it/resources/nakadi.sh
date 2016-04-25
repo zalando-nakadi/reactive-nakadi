@@ -38,8 +38,11 @@ function start_nakadi {
     echo -n "About to clone Nakadi... "
     rm -rf $DIRECTORY/
     $GIT clone $REPO $DIRECTORY
-    sed  -i "" "s/localhost:5432/$DOCKER_IP:5432/g" $DIRECTORY/src/main/resources/application.yml
     echo -e "Cloned Nakadi to ${DIRECTORY} ${OK}✔${RESET}"
+
+    echo -n "Editing config $DIRECTORY/src/main/resources/application.yml... "
+    sed  -i "" "s/localhost:5432/$DOCKER_IP:5432/g" $DIRECTORY/src/main/resources/application.yml
+    echo -e "Done! ${OK}✔${RESET}"
 
     echo -n "Building Nakadi... "
     export PUBLISH_NAKADI_PORT="-p $NAKADI_PORT:$NAKADI_PORT"
@@ -47,7 +50,7 @@ function start_nakadi {
     ./gradlew startDockerContainer
     cd -
 
-    echo -n "Waiting on Nakadi to start "
+    echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
     until $(curl --silent --output /dev/null http://$DOCKER_IP:8080/health); do
         sleep 1
         echo -n ". "

@@ -1,5 +1,21 @@
 language: scala
-jdk:
+sudo: required
+
+before_script:
+  - sudo /etc/init.d/postgresql stop
+
+9jdk:
   - oraclejdk8
+
 scala:
    - 2.11.7
+
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION clean test
+  - sbt ++$TRAVIS_SCALA_VERSION clean it:test
+
+services:
+  - docker
+
+env:
+  - DOCKER_IP=127.0.0.1
