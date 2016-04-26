@@ -10,7 +10,7 @@ trait DockerProvider {
   def stop: Int
 }
 
-class NakadiDockerProvider(config: Config) extends DockerProvider {
+class NakadiDockerProvider extends DockerProvider {
 
   override def start: Int = "src/it/resources/nakadi.sh start" !
 

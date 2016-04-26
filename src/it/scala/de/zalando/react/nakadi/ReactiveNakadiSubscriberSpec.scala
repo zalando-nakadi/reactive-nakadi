@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 class ReactiveNakadiSubscriberSpec extends NakadiTest {
 
-  override val dockerProvider: DockerProvider = new NakadiDockerProvider(config)
+  override val dockerProvider: DockerProvider = new NakadiDockerProvider
   override implicit val system: ActorSystem = ActorSystem("ReactiveNakadiSubscriberSpec")
 
   def generateEvent = {
