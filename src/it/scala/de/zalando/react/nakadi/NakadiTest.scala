@@ -2,20 +2,16 @@ package de.zalando.react.nakadi
 
 import akka.testkit.TestKit
 import akka.stream.ActorMaterializer
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.stream.actor.WatermarkRequestStrategy
-
 import play.api.libs.json.Json
 import com.typesafe.config.{Config, ConfigFactory}
-
 import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
 import de.zalando.react.nakadi.client.NakadiClientImpl
 import de.zalando.react.nakadi.commit.handlers.InMemoryCommitHandler
-
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OptionValues}
 
-import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 
@@ -40,6 +36,19 @@ trait NakadiTest extends FlatSpec
 
   val nakadiHost = s"http://${sys.env("DOCKER_IP")}:${config.getString("docker.nakadi.port")}"
   val nakadi = new ReactiveNakadi()
+
+  lazy val nakadiClientActor: ActorRef = {
+    import de.zalando.react.nakadi.client.Properties
+
+    val properties = Properties(
+      server = nakadiHost,
+      tokenProvider = None,
+      acceptAnyCertificate = true,
+      connectionTimeout = globalTimeout
+    )
+
+    system.actorOf(Props(new NakadiClientImpl(properties)))
+  }
 
   def createProducerProperties: ProducerProperties = {
     ProducerProperties(
@@ -70,19 +79,8 @@ trait NakadiTest extends FlatSpec
 
   def newNakadi(): ReactiveNakadi = new ReactiveNakadi()
 
-  @tailrec
-  final def verifyNever(unexpectedCondition: => Boolean, start: Long = System.currentTimeMillis()): Unit = {
-    val now = System.currentTimeMillis()
-    if (start + 3000 >= now) {
-      Thread.sleep(100)
-      if (unexpectedCondition)
-        fail("Assertion failed before timeout passed")
-      else
-        verifyNever(unexpectedCondition, start)
-    }
-  }
-
   override def afterAll(): Unit = {
+    nakadiClientActor ! PoisonPill
     dockerProvider.stop
     materializer.shutdown()
     TestKit.shutdownActorSystem(system)
@@ -94,15 +92,7 @@ trait NakadiTest extends FlatSpec
   }
 
   private def createTopic(): Unit = {
-    import de.zalando.react.nakadi.client.Properties
     import de.zalando.react.nakadi.client.models.{EventType, EventTypeCategoryEnum}
-
-    val properties = Properties(
-      server = nakadiHost,
-      tokenProvider = None,
-      acceptAnyCertificate = true,
-      connectionTimeout = globalTimeout
-    )
 
     val rawSchema =
       """
@@ -125,9 +115,11 @@ trait NakadiTest extends FlatSpec
       enrichmentStrategies = Seq("metadata_enrichment")
     ))
 
-    system.actorOf(Props(new NakadiClientImpl(properties))) ! message // FIME - implement some sort of acknowledgement
+    // FIXME - implement some sort of acknowledgement
+    nakadiClientActor ! message
 
-    Thread.sleep(5000) // Hack - sleep a few seconds to wait for event type to be created
+    // Hack - sleep a few seconds to wait for event type to be created
+    Thread.sleep(5000)
   }
 
 }
