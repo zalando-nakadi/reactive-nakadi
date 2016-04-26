@@ -35,4 +35,15 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
+// commons-logging in play-ws_2.11 and aws-java-sdk-dynamodb is conflicting with slf4j-api
+libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
+
+// causes merge problem when building fat JAR, but is not needed
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
+
 mainClass in assembly := Some("de.zalando.react.nakadi.TestApp")
