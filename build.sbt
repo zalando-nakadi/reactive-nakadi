@@ -9,7 +9,6 @@ val akkaVersion = "2.4.2"
 parallelExecution in ThisBuild := false
 
 resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
-resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
 
 val customItSettings = Defaults.itSettings ++ Seq(
   scalaSource := baseDirectory.value / "src" / "it",
