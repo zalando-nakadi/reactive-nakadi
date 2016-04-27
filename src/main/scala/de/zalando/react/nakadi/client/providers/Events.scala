@@ -125,7 +125,7 @@ class ConsumeEvents(properties: ConsumerProperties,
   def readFromCommitHandler: Future[Option[Cursor]] = {
     properties
       .commitHandler
-      .readCommit(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
+      .get(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
         Cursor(partition = offsetTracking.partitionId, offset = offsetTracking.checkpointId)
       }).recover {
         case ex =>

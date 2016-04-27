@@ -34,11 +34,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   def tableName(groupId: String, topic: String) = s"reactive-nakadi-$topic-$groupId"
 
-  override def commitSync(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
-    put(groupId, topic, offsets)
-  }
-
-  override def readCommit(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = Future {
+  override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = Future {
 
     Option(ddbClient.getTable(tableName(groupId, topic)).getItem(PartitionIdKey, partitionId)).map { i =>
       OffsetTracking(
@@ -52,7 +48,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }
   }
 
-  def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  override def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
 
     withTable(groupId, topic, offsets) {
       case (table, true) =>

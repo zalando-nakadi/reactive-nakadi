@@ -21,7 +21,7 @@ case class OffsetMap(var map: Map[TopicPartition, Long] = Map.empty) {
 
   def nonEmpty = map.nonEmpty
 
-  def toCommitRequestInfo(leaseHolder: String, leaseId: Option[String], leaseTimestamp: DateTime = new DateTime(DateTimeZone.UTC)): Seq[OffsetTracking] = {
+  def toCommitRequestInfo(leaseHolder: String, leaseId: Option[String], leaseTimestamp: DateTime): Seq[OffsetTracking] = {
 
     map.map { values =>
       OffsetTracking(

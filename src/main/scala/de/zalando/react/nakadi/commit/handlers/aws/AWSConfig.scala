@@ -10,10 +10,10 @@ object AWSConfig {
     val config = resource.fold(ConfigFactory.load())(ConfigFactory.load)
     new AWSConfig(
       baseConfig = config,
-      commitConfig = config.getConfig("commit.aws.dynamodb"),
-      region = config.getConfig("commit.aws").getString("region"),
-      readCapacityUnits = config.getConfig("commit.aws.dynamodb").getLong("read-capacity-units"),
-      writeCapacityUnits = config.getConfig("commit.aws.dynamodb").getLong("write-capacity-units")
+      commitConfig = config.getConfig("lease-management.commit.aws.dynamodb"),
+      region = config.getConfig("lease-management.commit.aws").getString("region"),
+      readCapacityUnits = config.getConfig("lease-management.commit.aws.dynamodb").getLong("read-capacity-units"),
+      writeCapacityUnits = config.getConfig("lease-management.commit.aws.dynamodb").getLong("write-capacity-units")
     )
   }
 }

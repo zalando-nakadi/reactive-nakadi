@@ -37,7 +37,10 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
   private val MaxBufferSize = 100
   private var buf = Vector.empty[StringConsumerMessage]
 
-  override def preStart() = client ! ConsumeCommand.Start
+  override def preStart() = {
+    // TODO - check lease manager for other consumers
+    client ! ConsumeCommand.Start
+  }
 
   override def receive: Receive = {
 
@@ -80,15 +83,16 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     import scala.concurrent.ExecutionContext.Implicits.global
     val senderRef = sender()
 
-    // FIXME - perhaps make the commit handler a separate Actor
-    consumerAndProps
-      .properties
-      .commitHandler
-      .commitSync(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-id")))
-      .onComplete {
-        case Failure(err) => log.error(err, "AWS Error:")
-        case Success(_) => senderRef ! CommitAck
-      }
+//    // FIXME - perhaps make the commit handler a separate Actor
+//    consumerAndProps
+//      .properties
+//      .commitHandler
+//      .put(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-id")))
+//      .onComplete {
+//        case Failure(err) => log.error(err, "AWS Error:")
+//        case Success(_) => senderRef ! CommitAck
+//      }
+    ???
   }
 
   @tailrec
