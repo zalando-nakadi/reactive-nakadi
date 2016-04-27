@@ -42,61 +42,59 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   override def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = {
 
-    withTable(groupId, topic) {
-      case (table, true) =>
-        // Table just created
-        handleOnCreated(table, groupId, topic, offsets)
-      case (table, false) =>
-        // Table already existed
-        handleUpdate(table, groupId, topic, offsets)
-    }
-  }
-
-  private def handleUpdate(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = Future {
-    offsets.map { offsetTracking =>
-      val valueMap = new ValueMap()
-        .withString(":cidval", offsetTracking.checkpointId)
-        .withString(":lhval", offsetTracking.leaseHolder)
-        .withNumber(":lcval", 1)
-        .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
-
-      var leaseIdKey = ""
-      offsetTracking.leaseId.foreach { leaseId =>
-        valueMap.withString(":lidval", leaseId)
-        leaseIdKey = s", $LeaseIdKey = :lidval"
+    withTable(groupId, topic) { table =>
+      Future.sequence {
+        offsets.map { offsetTracking =>
+          Option(table.getItem(PartitionIdKey, offsetTracking.partitionId))
+            .fold(handlePutItem(table, groupId, topic, offsetTracking)) { _ =>
+              handleUpdateItem(table, groupId, topic, offsetTracking)
+            }
+        }
       }
-
-      table.updateItem(new UpdateItemSpec()
-        .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
-        .withUpdateExpression(
-          s"""
-             |SET
-             | $CheckpointIdKey = :cidval,
-             | $LeaseHolderKey = :lhval,
-             | $LeaseCounterKey = leaseCounter + :lcval,
-             | $LeaseTimestampKey = :ltsval $leaseIdKey
-             | """.stripMargin)
-        .withValueMap(valueMap))
-      table.getItem(PartitionIdKey, offsetTracking.partitionId)
-    }.map(toOffsetTracking)
-  }
-
-  private def handleOnCreated(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = Future {
-
-    offsets.map { offsetTracking =>
-      val item = new Item()
-        .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
-        .withString(CheckpointIdKey, offsetTracking.checkpointId)
-        .withString(LeaseHolderKey, offsetTracking.leaseHolder)
-        .withNumber(LeaseCounterKey, 1)
-        .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
-      offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
-      table.putItem(item)
-      toOffsetTracking(item)
     }
   }
 
-  private def withTable[T](groupId: String, topic: String)(func: ((Table, Boolean)) => Future[T]): Future[T] = {
+  private def handleUpdateItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): Future[OffsetTracking] = Future {
+    val valueMap = new ValueMap()
+      .withString(":cidval", offsetTracking.checkpointId)
+      .withString(":lhval", offsetTracking.leaseHolder)
+      .withNumber(":lcval", 1)
+      .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
+
+    var leaseIdKey = ""
+    offsetTracking.leaseId.foreach { leaseId =>
+      valueMap.withString(":lidval", leaseId)
+      leaseIdKey = s", $LeaseIdKey = :lidval"
+    }
+
+    table.updateItem(new UpdateItemSpec()
+      .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+      .withUpdateExpression(
+        s"""
+           |SET
+           | $CheckpointIdKey = :cidval,
+           | $LeaseHolderKey = :lhval,
+           | $LeaseCounterKey = leaseCounter + :lcval,
+           | $LeaseTimestampKey = :ltsval $leaseIdKey
+           | """.stripMargin)
+      .withValueMap(valueMap))
+    toOffsetTracking(table.getItem(PartitionIdKey, offsetTracking.partitionId))
+  }
+
+  private def handlePutItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): Future[OffsetTracking] = Future {
+
+    val item = new Item()
+      .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+      .withString(CheckpointIdKey, offsetTracking.checkpointId)
+      .withString(LeaseHolderKey, offsetTracking.leaseHolder)
+      .withNumber(LeaseCounterKey, 1)
+      .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
+    offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
+    table.putItem(item)
+    toOffsetTracking(item)
+  }
+
+  private def withTable[T](groupId: String, topic: String)(func: Table => Future[T]): Future[T] = {
 
     val table = tableName(groupId, topic)
     Future {
@@ -110,11 +108,11 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
             .withWriteCapacityUnits(awsConfiguration.writeCapacityUnits)
         ))
       tableObj.waitForActive()
-      (tableObj, true)
+      tableObj
     }.recover {
       case tableExists: ResourceInUseException =>
         log.debug(s"Table $table already exists")
-        (ddbClient.getTable(table), false)
+        ddbClient.getTable(table)
     }.flatMap(func)
   }
 
