@@ -46,9 +46,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
       Future.sequence {
         offsets.map { offsetTracking =>
           Option(table.getItem(PartitionIdKey, offsetTracking.partitionId))
-            .fold(handlePutItem(table, groupId, topic, offsetTracking)) { _ =>
-              handleUpdateItem(table, groupId, topic, offsetTracking)
-            }
+            .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offsetTracking)
         }
       }
     }
