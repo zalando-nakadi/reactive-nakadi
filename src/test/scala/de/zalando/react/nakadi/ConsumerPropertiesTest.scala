@@ -2,13 +2,14 @@ package de.zalando.react.nakadi
 
 import java.util.UUID
 
-import de.zalando.react.nakadi.commit.handlers
+import de.zalando.react.nakadi.commit.handlers.BaseHandler
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.duration._
 
 
-class ConsumerPropertiesTest extends FlatSpec with Matchers {
+class ConsumerPropertiesTest extends FlatSpec with Matchers with MockFactory {
 
   def uuid() = UUID.randomUUID().toString
   def token = "random_token"
@@ -16,6 +17,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
   val topic = uuid()
   val grouoId = uuid()
   val partition = uuid()
+  val commitHandler = mock[BaseHandler]
 
   "ConsumerProperties" should "handle simple case" in {
     val props = ConsumerProperties(
@@ -23,7 +25,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
-      commitHandler = handlers.InMemoryCommitHandler,
+      commitHandler = commitHandler,
       topic = topic
     )
     props.server should === (server)
@@ -31,7 +33,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
-    props.commitHandler should === (handlers.InMemoryCommitHandler)
+    props.commitHandler should === (commitHandler)
     props.offset should === (None)
     props.commitInterval should === (30.seconds)
     props.connectionTimeout should === (5000.milliseconds)
@@ -51,7 +53,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
       tokenProvider = Option(() => token),
       groupId = grouoId,
       partition = partition,
-      commitHandler = handlers.InMemoryCommitHandler,
+      commitHandler = commitHandler,
       topic = topic
     ).commitInterval(10.seconds)
       .readFromStartOfStream()
@@ -61,7 +63,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers {
     props.topic should === (topic)
     props.groupId should === (grouoId)
     props.partition should === (partition)
-    props.commitHandler should === (handlers.InMemoryCommitHandler)
+    props.commitHandler should === (commitHandler)
     props.offset.get.toString should === ("BEGIN")
     props.commitInterval should === (10.seconds)
     props.connectionTimeout should === (5000.milliseconds)

@@ -1,6 +1,6 @@
 package de.zalando.react.nakadi.commit
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.DateTime
 
 
 case class OffsetMap(var map: Map[TopicPartition, Long] = Map.empty) {

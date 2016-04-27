@@ -24,7 +24,7 @@ object TestApp extends App {
 
   val nakadi = new ReactiveNakadi()
 
-  val publisher: Publisher[ConsumerMessage] = nakadi.consume(ConsumerProperties(
+  val publisher = nakadi.consumeWithOffsetSink(ConsumerProperties(
     server = "http://192.168.99.100:8080/",
     tokenProvider = None,
     topic = "reactive-nakadi-testing",
@@ -35,34 +35,8 @@ object TestApp extends App {
     acceptAnyCertificate = true
   ))
 
-  val subscriber: Subscriber[ProducerMessage] = nakadi.publish(ProducerProperties(
-    server = "http://192.168.99.100:8080/",
-    tokenProvider = None,
-    topic = "reactive-nakadi-testing-uppercase",
-    acceptAnyCertificate = true
-  ))
-
-  def makeUpper(msg: StringConsumerMessage): ProducerMessage = {
-    import de.zalando.react.nakadi.client.models.{DataOpEnum, Event, MetaData, EventPayload}
-
-    println(s"Incoming message: $msg")
-    ProducerMessage(msg.events.map(_.data.toString().toUpperCase).map { rawEvent =>
-      Event(
-        data_type = "test_data",
-        data_op = DataOpEnum.C,
-        data = Json.parse(rawEvent).as[EventPayload],
-        MetaData(
-          eid = UUID.randomUUID().toString,
-          occurred_at = new DateTime(),
-          flow_id = Option("my-test-flow-id")
-        )
-      )
-    })
-  }
-
   Source
-    .fromPublisher(publisher)
-    .map(makeUpper)
-    .to(Sink.fromSubscriber(subscriber))
+    .fromPublisher(publisher.publisher)
+    .to(publisher.offsetCommitSink)
     .run()
 }

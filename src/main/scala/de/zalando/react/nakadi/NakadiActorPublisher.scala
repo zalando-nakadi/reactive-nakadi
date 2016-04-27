@@ -2,6 +2,7 @@ package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, Props}
+import com.typesafe.config.ConfigFactory
 import de.zalando.react.nakadi.commit.OffsetMap
 import de.zalando.react.nakadi.client.models.{Event, EventStreamBatch}
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
@@ -83,16 +84,17 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     import scala.concurrent.ExecutionContext.Implicits.global
     val senderRef = sender()
 
-//    // FIXME - perhaps make the commit handler a separate Actor
-//    consumerAndProps
-//      .properties
-//      .commitHandler
-//      .put(groupId, topic, offsetMap.toCommitRequestInfo("some-lease-holder", Some("some-lease-id")))
-//      .onComplete {
-//        case Failure(err) => log.error(err, "AWS Error:")
-//        case Success(_) => senderRef ! CommitAck
-//      }
-    ???
+    // FIXME - perhaps make the commit handler a separate Actor
+    LeaseManager(
+      "some-lease-holder",
+      consumerAndProps.properties.partition,
+      consumerAndProps.properties.commitHandler,
+      ConfigFactory.load()
+    ).commit(groupId, topic, offsetMap)
+      .onComplete {
+        case Failure(err) => log.error(err, "AWS Error:")
+        case Success(_) => senderRef ! CommitAck
+      }
   }
 
   @tailrec

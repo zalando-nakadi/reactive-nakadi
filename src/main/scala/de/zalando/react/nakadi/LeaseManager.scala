@@ -6,6 +6,7 @@ import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking}
 import de.zalando.react.nakadi.commit.handlers.{BaseHandler => BaseCommitHandler}
 import org.joda.time.{DateTime, DateTimeZone}
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,7 +19,7 @@ trait LeaseManager {
 
   def leaseHolder: String
 
-  def counter: Long
+  def counter: mutable.Map[String, Long]
 
   def isLeaseAvailable(groupId: String, topic: String)(implicit executionContext: ExecutionContext): Future[Boolean]
 
@@ -42,20 +43,22 @@ class LeaseManagerImpl(override val leaseHolder: String,
                        commitHandler: BaseCommitHandler,
                        config: Config, idGenerator: IdGenerator) extends LeaseManager {
 
-  private var _counter: Long = 0
-  private val _leaseId: String = idGenerator.generate
-  private val staleLeaseDelta: FiniteDuration = config.getInt("lease-management.stale-lease-delta").seconds  // 10 mins
+  private val staleLeaseDelta: FiniteDuration = config.getInt("lease-management.stale-lease-delta").seconds
 
   def newLeaseTimeout: DateTime = new DateTime(DateTimeZone.UTC).plusSeconds(staleLeaseDelta.length.toInt)
-  override def counter: Long = _counter
-  override def leaseId: String = _leaseId
+
+  // Key / value for partition id and lease counter
+  override val counter: mutable.Map[String, Long] = mutable.Map.empty
+  override val leaseId: String = idGenerator.generate
 
   private def execCommit(groupId: String,
                          topic: String,
                          offsetTracking: Seq[OffsetTracking])
                         (implicit executionContext: ExecutionContext): Future[Unit] = {
 
-    commitHandler.put(groupId, topic, offsetTracking).map(_ => _counter += 1)
+    commitHandler.put(groupId, topic, offsetTracking).map {
+      _.foreach(offset => counter(offset.partitionId) = offset.leaseCounter.getOrElse(0))
+    }
   }
 
   override def commit(groupId: String,
@@ -71,7 +74,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
 
     commitHandler.get(groupId, topic, partitionId).flatMap {
       _.fold(Future.successful(true)) { offsetTracking =>
-        if (offsetTracking.leaseCounter.contains(_counter) && offsetTracking.leaseTimestamp.isAfterNow) {
+        if (offsetTracking.leaseCounter.contains(counter.getOrElse(partitionId, 0)) && offsetTracking.leaseTimestamp.isAfterNow) {
           execCommit(groupId, topic, Seq(offsetTracking.copy(leaseTimestamp = newLeaseTimeout))).map(_ => true)
         } else Future.successful(false)
       }

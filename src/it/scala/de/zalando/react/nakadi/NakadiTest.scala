@@ -8,7 +8,9 @@ import play.api.libs.json.Json
 import com.typesafe.config.{Config, ConfigFactory}
 import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
 import de.zalando.react.nakadi.client.NakadiClientImpl
-import de.zalando.react.nakadi.commit.handlers.InMemoryCommitHandler
+import de.zalando.react.nakadi.commit.handlers.BaseHandler
+import de.zalando.react.nakadi.utils.IdGenerator
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OptionValues}
 
@@ -19,7 +21,8 @@ trait NakadiTest extends FlatSpec
   with BeforeAndAfterAll
   with Matchers
   with ScalaFutures
-  with OptionValues {
+  with OptionValues
+  with MockFactory {
 
   val config: Config = ConfigFactory.load()
   val globalTimeout = 2.second
@@ -65,7 +68,7 @@ trait NakadiTest extends FlatSpec
       topic = topic,
       groupId = group,
       partition = "0", // TODO - remove this, should be auto assigned
-      commitHandler = InMemoryCommitHandler
+      commitHandler = mock[BaseHandler]
     ).commitInterval(2.seconds).readFromStartOfStream()
   }
 

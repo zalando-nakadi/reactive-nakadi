@@ -35,22 +35,14 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
   def tableName(groupId: String, topic: String) = s"reactive-nakadi-$topic-$groupId"
 
   override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = Future {
-
-    Option(ddbClient.getTable(tableName(groupId, topic)).getItem(PartitionIdKey, partitionId)).map { i =>
-      OffsetTracking(
-        partitionId = i.getString(PartitionIdKey),
-        checkpointId = i.getString(CheckpointIdKey),
-        leaseHolder = i.getString(LeaseHolderKey),
-        leaseCounter = Option(i.getLong(LeaseCounterKey)),
-        leaseTimestamp = new DateTime(i.getString(LeaseTimestampKey), DateTimeZone.UTC),
-        leaseId = Option(i.getString(LeaseIdKey))
-      )
-    }
+    Option(ddbClient
+      .getTable(tableName(groupId, topic))
+      .getItem(PartitionIdKey, partitionId)).map(toOffsetTracking)
   }
 
-  override def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  override def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = {
 
-    withTable(groupId, topic, offsets) {
+    withTable(groupId, topic) {
       case (table, true) =>
         // Table just created
         handleOnCreated(table, groupId, topic, offsets)
@@ -60,53 +52,51 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     }
   }
 
-  private def handleUpdate(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
-    Future {
-      offsets.map { offsetTracking =>
-        val valueMap = new ValueMap()
-          .withString(":cidval", offsetTracking.checkpointId)
-          .withString(":lhval", offsetTracking.leaseHolder)
-          .withNumber(":lcval", 1)
-          .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
+  private def handleUpdate(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = Future {
+    offsets.map { offsetTracking =>
+      val valueMap = new ValueMap()
+        .withString(":cidval", offsetTracking.checkpointId)
+        .withString(":lhval", offsetTracking.leaseHolder)
+        .withNumber(":lcval", 1)
+        .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
 
-        var leaseIdKey = ""
-        offsetTracking.leaseId.foreach { leaseId =>
-          valueMap.withString(":lidval", leaseId)
-          leaseIdKey = s", $LeaseIdKey = :lidval"
-        }
-
-        table.updateItem(new UpdateItemSpec()
-          .withPrimaryKey("partitionId", offsetTracking.partitionId)
-          .withUpdateExpression(
-            s"""
-               |SET
-               | $CheckpointIdKey = :cidval,
-               | $LeaseHolderKey = :lhval,
-               | $LeaseCounterKey = leaseCounter + :lcval,
-               | $LeaseTimestampKey = :ltsval $leaseIdKey
-               | """.stripMargin)
-          .withValueMap(valueMap))
+      var leaseIdKey = ""
+      offsetTracking.leaseId.foreach { leaseId =>
+        valueMap.withString(":lidval", leaseId)
+        leaseIdKey = s", $LeaseIdKey = :lidval"
       }
-    }.map(_.foreach(outcome => log.debug(s"Update item outcome: ${outcome.getUpdateItemResult}")))
+
+      table.updateItem(new UpdateItemSpec()
+        .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+        .withUpdateExpression(
+          s"""
+             |SET
+             | $CheckpointIdKey = :cidval,
+             | $LeaseHolderKey = :lhval,
+             | $LeaseCounterKey = leaseCounter + :lcval,
+             | $LeaseTimestampKey = :ltsval $leaseIdKey
+             | """.stripMargin)
+        .withValueMap(valueMap))
+      table.getItem(PartitionIdKey, offsetTracking.partitionId)
+    }.map(toOffsetTracking)
   }
 
-  private def handleOnCreated(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Unit] = {
+  private def handleOnCreated(table: Table, groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = Future {
 
-    Future {
-      offsets.map { offsetTracking =>
-        val item = new Item()
-          .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
-          .withString(CheckpointIdKey, offsetTracking.checkpointId)
-          .withString(LeaseHolderKey, offsetTracking.leaseHolder)
-          .withNumber(LeaseCounterKey, 1)
-          .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
-        offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
-        table.putItem(item)
-      }
-    }.map(_.foreach(outcome => log.debug(s"Put item outcome: ${outcome.getPutItemResult}")))
+    offsets.map { offsetTracking =>
+      val item = new Item()
+        .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
+        .withString(CheckpointIdKey, offsetTracking.checkpointId)
+        .withString(LeaseHolderKey, offsetTracking.leaseHolder)
+        .withNumber(LeaseCounterKey, 1)
+        .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
+      offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
+      table.putItem(item)
+      toOffsetTracking(item)
+    }
   }
 
-  private def withTable(groupId: String, topic: String, offsets: Seq[OffsetTracking])(func: ((Table, Boolean)) => Future[Unit]): Future[Unit] = {
+  private def withTable[T](groupId: String, topic: String)(func: ((Table, Boolean)) => Future[T]): Future[T] = {
 
     val table = tableName(groupId, topic)
     Future {
@@ -126,5 +116,16 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
         log.debug(s"Table $table already exists")
         (ddbClient.getTable(table), false)
     }.flatMap(func)
+  }
+
+  private def toOffsetTracking(item: Item): OffsetTracking = {
+    OffsetTracking(
+      partitionId = item.getString(PartitionIdKey),
+      checkpointId = item.getString(CheckpointIdKey),
+      leaseHolder = item.getString(LeaseHolderKey),
+      leaseCounter = Option(item.getLong(LeaseCounterKey)),
+      leaseTimestamp = new DateTime(item.getString(LeaseTimestampKey), DateTimeZone.UTC),
+      leaseId = Option(item.getString(LeaseIdKey))
+    )
   }
 }
