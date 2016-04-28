@@ -15,35 +15,20 @@ trait LeaseManager {
 
   def leaseId: String
 
-  def partitionId: String
-
   def leaseHolder: String
 
   def counter: mutable.Map[String, Long]
 
-  def isLeaseAvailable(groupId: String, topic: String)(implicit executionContext: ExecutionContext): Future[Boolean]
+  def isLeaseAvailable(groupId: String, topic: String, partitionId: String)(implicit executionContext: ExecutionContext): Future[Boolean]
 
   def commit(groupId: String, topic: String, offsetMap: OffsetMap)(implicit executionContext: ExecutionContext): Future[Unit]
 
 }
 
-object LeaseManager {
-  def apply(leaseHolder: String,
-            partitionId: String,
-            commitHandler: BaseCommitHandler,
-            config: Config,
-            idGenerator: IdGenerator = IdGenerator): LeaseManager = {
-    new LeaseManagerImpl(leaseHolder, partitionId, commitHandler, config, idGenerator)
-  }
-}
-
-
 class LeaseManagerImpl(override val leaseHolder: String,
-                       override val partitionId: String,
                        commitHandler: BaseCommitHandler,
-                       config: Config, idGenerator: IdGenerator) extends LeaseManager {
-
-  private val staleLeaseDelta: FiniteDuration = config.getInt("lease-management.stale-lease-delta").seconds
+                       staleLeaseDelta: FiniteDuration,
+                       idGenerator: IdGenerator) extends LeaseManager {
 
   def newLeaseTimeout: DateTime = new DateTime(DateTimeZone.UTC).plusSeconds(staleLeaseDelta.length.toInt)
 
@@ -70,14 +55,25 @@ class LeaseManagerImpl(override val leaseHolder: String,
     execCommit(groupId, topic, offsetTracking)
   }
 
-  override def isLeaseAvailable(groupId: String, topic: String)(implicit executionContext: ExecutionContext): Future[Boolean] = {
+  override def isLeaseAvailable(groupId: String, topic: String, partitionId: String)
+                               (implicit executionContext: ExecutionContext): Future[Boolean] = {
 
     commitHandler.get(groupId, topic, partitionId).flatMap {
       _.fold(Future.successful(true)) { offsetTracking =>
-        if (offsetTracking.leaseCounter.contains(counter.getOrElse(partitionId, 0)) && offsetTracking.leaseTimestamp.isAfterNow) {
+        if (offsetTracking.leaseCounter.contains(counter.getOrElse(partitionId, 0))
+              && offsetTracking.leaseTimestamp.isAfterNow) {
           execCommit(groupId, topic, Seq(offsetTracking.copy(leaseTimestamp = newLeaseTimeout))).map(_ => true)
         } else Future.successful(false)
       }
     }
+  }
+}
+
+object LeaseManager {
+  def apply(leaseHolder: String,
+            commitHandler: BaseCommitHandler,
+            staleLeaseDelta: FiniteDuration,
+            idGenerator: IdGenerator = IdGenerator): LeaseManager = {
+    new LeaseManagerImpl(leaseHolder, commitHandler, staleLeaseDelta, idGenerator)
   }
 }

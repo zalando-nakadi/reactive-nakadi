@@ -45,7 +45,9 @@ case class ConsumerProperties(
   streamKeepAliveLimit: Int = 0,
   pollParallelism: Int = 0,
   autoReconnect: Boolean = false,
-  acceptAnyCertificate: Boolean = true
+  acceptAnyCertificate: Boolean = true,
+  staleLeaseDelta: FiniteDuration = 300.seconds,
+  leaseHolder: String = "test-lease-holder" // FIXME - set this to make sense
 ) {
 
   /**

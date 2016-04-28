@@ -11,6 +11,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -22,7 +23,6 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val groupId = "some-group-id"
   val topic = "some-topic"
   val timestamp = new DateTime(DateTimeZone.UTC)
-  val config: Config = ConfigFactory.load()
 
   // Map of topic-partition to offset count
   val offsetMap = OffsetMap(Map(TopicPartition(topic, partitionId.toInt) -> 10))
@@ -31,7 +31,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val commitHandler = mock[BaseHandler]
   val idGenerator = mock[IdGenerator]
 
-  def createLeaseManager = LeaseManager(leaseHolder, partitionId, commitHandler, config, idGenerator)
+  def createLeaseManager = LeaseManager(leaseHolder, commitHandler, 100.seconds, idGenerator)
   def setupIdGenerator = (idGenerator.generate _).expects.returning(leaseId)
 
   "LeaseManager" should "create a new instance with a lease id property" in {
@@ -39,7 +39,6 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
 
     val leaseManager = createLeaseManager
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map.empty)
   }
@@ -55,7 +54,6 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     leaseManager.commit(groupId, topic, offsetMap).futureValue should === (())
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map(partitionId -> 1))
   }
@@ -68,10 +66,9 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
       .returning(Future.successful(None))
 
     val leaseManager = createLeaseManager
-    leaseManager.isLeaseAvailable(groupId, topic).futureValue should === (true)
+    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map.empty)
   }
@@ -85,10 +82,9 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
 
     val leaseManager = createLeaseManager
     leaseManager.counter("some-other-partition-id") = 10
-    leaseManager.isLeaseAvailable(groupId, topic).futureValue should === (true)
+    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map("some-other-partition-id" -> 10))
   }
@@ -107,10 +103,9 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 10
-    leaseManager.isLeaseAvailable(groupId, topic).futureValue should === (true)
+    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map(partitionId -> 10))
   }
@@ -126,10 +121,9 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 10
-    leaseManager.isLeaseAvailable(groupId, topic).futureValue should === (false)
+    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (false)
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map(partitionId -> 10))
   }
@@ -145,10 +139,9 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 5
-    leaseManager.isLeaseAvailable(groupId, topic).futureValue should === (false)
+    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (false)
 
     leaseManager.leaseId should === (leaseId)
-    leaseManager.partitionId should === (partitionId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map(partitionId -> 5))
   }

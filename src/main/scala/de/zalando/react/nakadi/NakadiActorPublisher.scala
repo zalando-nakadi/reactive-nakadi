@@ -85,16 +85,17 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     val senderRef = sender()
 
     // FIXME - perhaps make the commit handler a separate Actor
-    LeaseManager(
-      "some-lease-holder",
-      consumerAndProps.properties.partition,
-      consumerAndProps.properties.commitHandler,
-      ConfigFactory.load()
-    ).commit(groupId, topic, offsetMap)
-      .onComplete {
-        case Failure(err) => log.error(err, "AWS Error:")
-        case Success(_) => senderRef ! CommitAck
-      }
+//    LeaseManager(
+//      "some-lease-holder",
+//      consumerAndProps.properties.partition,
+//      consumerAndProps.properties.commitHandler,
+//      ConfigFactory.load()
+//    ).commit(groupId, topic, offsetMap)
+//      .onComplete {
+//        case Failure(err) => log.error(err, "AWS Error:")
+//        case Success(_) => senderRef ! CommitAck
+//      }
+    ???
   }
 
   @tailrec
