@@ -31,7 +31,7 @@ object TestApp extends App {
     groupId = "some-group",
     partition = "0",
     commitHandler = new DynamoDBHandler(system),
-    offset = Some(BeginOffset),
+    //offset = Some(BeginOffset),
     acceptAnyCertificate = true
   ))
 

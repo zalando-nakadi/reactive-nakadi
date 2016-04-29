@@ -41,16 +41,17 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
   private var buf = Vector.empty[StringConsumerMessage]
 
   override def preStart() = leaseManager ! RequestLease(groupId, topic, partition)
-  override def postStop() = leaseManager ! ReleaseLease(groupId, topic, partition)
+
+  def releaseLease() = leaseManager ! ReleaseLease(groupId, topic, partition)
 
   override def receive: Receive = {
 
     case ConsumeCommand.Init                              => registerSupervisor(sender())
     case Some(rawEvent: EventStreamBatch) if isActive     => readDemandedItems(rawEvent)
     case Request(_)                                       => deliverBuf()
-    case SubscriptionTimeoutExceeded                      => stop()
-    case Cancel                                           => stop()
-    case NakadiActorPublisher.Stop                        => stop()
+    case SubscriptionTimeoutExceeded                      => releaseLease()
+    case Cancel                                           => releaseLease()
+    case NakadiActorPublisher.Stop                        => releaseLease()
     case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
     case LeaseAvailable                                   => start()
     case LeaseUnavailable                                 => stop()
@@ -124,7 +125,9 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
   }
 
   def start() = {
-    isRunning = true
-    client ! ConsumeCommand.Start
+    if (!isRunning) {
+      isRunning = true
+      client ! ConsumeCommand.Start
+    }
   }
 }

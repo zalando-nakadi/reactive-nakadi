@@ -1,6 +1,6 @@
 package de.zalando.react.nakadi
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import de.zalando.react.nakadi.commit.OffsetMap
 
 import scala.util.{Failure, Success}
@@ -30,26 +30,39 @@ class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogg
   }
 
   private def flush(msg: Flush) = {
+    val senderRef = sender
     leaseManager.flush(msg.groupId, msg.topic, msg.partitionId, msg.offsetMap).onComplete {
-      case Failure(err) => log.error(err, "AWS Error:")
-      case Success(_) => sender ! LeaseAvailable
+      case Failure(err) => log.error(err, "Lease Management error when flushing:")
+      case Success(status) if status => senderRef ! LeaseAvailable
+      case Success(status) if !status => {
+        log.error(s"Lease is not usable for topic '${msg.topic}' partition '${msg.partitionId}' group '${msg.groupId}'")
+        senderRef ! LeaseUnavailable
+      }
     }
   }
 
   private def requestLease(msg: RequestLease): Unit = {
     val senderRef = sender
     leaseManager.requestLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
-      case Failure(err) => log.error(err, "AWS Error:")
+      case Failure(err) => log.error(err, "Lease Management error when requesting lease:")
       case Success(status) if status => senderRef ! LeaseAvailable
-      case Success(status) if !status => senderRef ! LeaseUnavailable
+      case Success(status) if !status => {
+        log.error(s"Lease is not usable for topic '${msg.topic}' partition '${msg.partitionId}' group '${msg.groupId}'")
+        senderRef ! LeaseUnavailable
+      }
     }
   }
 
   private def releaseLease(msg: ReleaseLease): Unit = {
     val senderRef = sender
     leaseManager.releaseLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
-      case Failure(err) => log.error(err, "AWS Error:")
+      case Failure(err) => log.error(err, "Lease Management error when releasing lease:")
       case Success(status) => senderRef ! LeaseUnavailable
     }
+  }
+
+  private def sendLeaseUnavailable(senderRef: ActorRef) = {
+    sys.error("Lease is not usable right now")
+    senderRef ! LeaseUnavailable
   }
 }

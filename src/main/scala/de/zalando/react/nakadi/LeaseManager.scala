@@ -43,6 +43,17 @@ class LeaseManagerImpl(override val leaseHolder: String,
 
   // Logging adapter is an optional attribute
   private def maybeWarn(msg: String) = log.foreach(_.warning(msg))
+  private def maybeDebug(msg: String) = log.foreach(_.debug(msg))
+
+  private def logInfo(operation: String, topic: String, groupId: String, partitionId: String) = {
+    maybeDebug(s"""
+      |   $operation lease holder: '$leaseHolder' (using ID $leaseId)
+      |   Info:
+      |     Topic = '$topic'
+      |     Group = '$groupId'
+      |     Partition = '$partitionId'
+      """.stripMargin)
+  }
 
   private def execCommit(groupId: String,
                          topic: String,
@@ -61,13 +72,15 @@ class LeaseManagerImpl(override val leaseHolder: String,
 
   override def requestLease(groupId: String, topic: String, partitionId: String)
                            (implicit executionContext: ExecutionContext): Future[Boolean] = {
+    logInfo("Requesting lease for", topic, groupId, partitionId)
     commitHandler.get(groupId, topic, partitionId).map(_.fold(true)(validate))
   }
 
   override def releaseLease(groupId: String, topic: String, partitionId: String)
                            (implicit executionContext: ExecutionContext): Future[Unit] = {
+    logInfo("Releasing lease for", topic, groupId, partitionId)
     commitHandler.get(groupId, topic, partitionId).map {
-      _.fold(maybeWarn(s"No lease exists for group: $groupId topic: $topic partition: $partitionId")) { currentOffset =>
+      _.fold(maybeWarn(s"No lease exists to release for group: '$groupId' topic: '$topic' partition: '$partitionId'")) { currentOffset =>
         commitHandler.put(groupId, topic, currentOffset.copy(leaseTimestamp = now, leaseCounter = Option(0)))
       }
     }
@@ -75,7 +88,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
 
   override def flush(groupId: String, topic: String, partitionId: String, offsetMap: OffsetMap)
                     (implicit executionContext: ExecutionContext): Future[Boolean] = {
-
+    logInfo("Executing flush for", topic, groupId, partitionId)
     val offsetTracking = OffsetTracking(
       partitionId = partitionId,
       checkpointId = offsetMap.lastOffsetAsString(TopicPartition(topic, partitionId)),

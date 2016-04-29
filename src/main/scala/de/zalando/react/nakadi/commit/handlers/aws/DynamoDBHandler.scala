@@ -34,21 +34,26 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
 
   def tableName(groupId: String, topic: String) = s"reactive-nakadi-$topic-$groupId"
 
-  override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = Future {
-    Option(ddbClient
-      .getTable(tableName(groupId, topic))
-      .getItem(PartitionIdKey, partitionId)).map(toOffsetTracking)
+  override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = {
+
+    withTable(groupId, topic) { table =>
+      Future {
+        Option(table.getItem(PartitionIdKey, partitionId)).map(toOffsetTracking)
+      }
+    }
   }
 
   override def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking] = {
 
     withTable(groupId, topic) { table =>
-      Option(table.getItem(PartitionIdKey, offset.partitionId))
-        .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offset)
+      Future {
+        Option(table.getItem(PartitionIdKey, offset.partitionId))
+          .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offset)
+      }
     }
   }
 
-  private def handleUpdateItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): Future[OffsetTracking] = Future {
+  private def handleUpdateItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): OffsetTracking = {
     val valueMap = new ValueMap()
       .withString(":cidval", offsetTracking.checkpointId)
       .withString(":lhval", offsetTracking.leaseHolder)
@@ -66,7 +71,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
       "leaseCounter + :lcval"
     } { count =>
       valueMap.withNumber(":lcval", count)
-      " :lcval"
+      ":lcval"
     }
 
     val expression = {
@@ -86,7 +91,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     toOffsetTracking(table.getItem(PartitionIdKey, offsetTracking.partitionId))
   }
 
-  private def handlePutItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): Future[OffsetTracking] = Future {
+  private def handlePutItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): OffsetTracking = {
 
     val item = new Item()
       .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
@@ -114,10 +119,9 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
         ))
       tableObj.waitForActive()
       tableObj
-    }.recover {
+    }.recoverWith {
       case tableExists: ResourceInUseException =>
-        log.debug(s"Table $table already exists")
-        ddbClient.getTable(table)
+        Future(ddbClient.getTable(table))
     }.flatMap(func)
   }
 
