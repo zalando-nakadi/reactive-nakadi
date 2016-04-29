@@ -45,7 +45,7 @@ class ReactiveNakadi {
 
   def consumerActorProps(props: ConsumerProperties)(implicit actorSystem: ActorSystem) = {
     val consumer = ReactiveNakadiConsumer(props, actorSystem)
-    NakadiActorPublisher.props(consumer)
+    NakadiActorPublisher.props(consumer, LeaseManager(props, actorSystem))
   }
 
   def producerActor(props: ProducerProperties, requestStrategy: () => RequestStrategy)(implicit actorSystem: ActorSystem): ActorRef = {

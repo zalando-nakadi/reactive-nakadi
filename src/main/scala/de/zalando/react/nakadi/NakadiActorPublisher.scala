@@ -1,16 +1,14 @@
 package de.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
-import akka.actor.{ActorLogging, ActorRef, Props}
-import com.typesafe.config.ConfigFactory
+import akka.actor.{ActorLogging, ActorRef, PoisonPill, Props}
 import de.zalando.react.nakadi.commit.OffsetMap
-import de.zalando.react.nakadi.client.models.{Event, EventStreamBatch}
+import de.zalando.react.nakadi.client.models.EventStreamBatch
 import de.zalando.react.nakadi.client.providers.ConsumeCommand
+import de.zalando.react.nakadi.NakadiActorPublisher.CommitOffsets
 import de.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage}
-import de.zalando.react.nakadi.NakadiActorPublisher.{CommitAck, CommitOffsets}
 
 import scala.annotation.tailrec
-import scala.util.{Failure, Success}
 
 
 object NakadiActorPublisher {
@@ -19,29 +17,31 @@ object NakadiActorPublisher {
   case class CommitAck(offsetMap: OffsetMap)
   case object Stop
 
-  def props(consumerAndProps: ReactiveNakadiConsumer) = {
-    Props(new NakadiActorPublisher(consumerAndProps))
+  def props(consumerAndProps: ReactiveNakadiConsumer, leaseManager: ActorRef) = {
+    Props(new NakadiActorPublisher(consumerAndProps, leaseManager))
   }
 }
 
 
-class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends ActorPublisher[StringConsumerMessage]
+class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManager: ActorRef) extends ActorPublisher[StringConsumerMessage]
   with ActorLogging {
 
   import akka.stream.actor.ActorPublisherMessage._
+  import de.zalando.react.nakadi.LeaseManagerActor._
+
+  private var isRunning: Boolean = false
 
   private val topic: String = consumerAndProps.properties.topic
   private val groupId: String = consumerAndProps.properties.groupId
+  private val partition: String = consumerAndProps.properties.partition
   private val client: ActorRef = consumerAndProps.nakadiClient
-  private var streamSupervisor: Option[ActorRef] = None  // TODO - There must be a better way...
+  private var streamSupervisor: Option[ActorRef] = None
 
   private val MaxBufferSize = 100
   private var buf = Vector.empty[StringConsumerMessage]
 
-  override def preStart() = {
-    // TODO - check lease manager for other consumers
-    client ! ConsumeCommand.Start
-  }
+  override def preStart() = leaseManager ! RequestLease(groupId, topic, partition)
+  override def postStop() = leaseManager ! ReleaseLease(groupId, topic, partition)
 
   override def receive: Receive = {
 
@@ -50,7 +50,10 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     case Request(_)                                       => deliverBuf()
     case SubscriptionTimeoutExceeded                      => stop()
     case Cancel                                           => stop()
+    case NakadiActorPublisher.Stop                        => stop()
     case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
+    case LeaseAvailable                                   => start()
+    case LeaseUnavailable                                 => stop()
   }
 
   private def registerSupervisor(ref: ActorRef) = {
@@ -80,23 +83,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     }
   }
 
-  private def executeCommit(offsetMap: OffsetMap): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val senderRef = sender()
-
-    // FIXME - perhaps make the commit handler a separate Actor
-//    LeaseManager(
-//      "some-lease-holder",
-//      consumerAndProps.properties.partition,
-//      consumerAndProps.properties.commitHandler,
-//      ConfigFactory.load()
-//    ).commit(groupId, topic, offsetMap)
-//      .onComplete {
-//        case Failure(err) => log.error(err, "AWS Error:")
-//        case Success(_) => senderRef ! CommitAck
-//      }
-    ???
-  }
+  private def executeCommit(offsetMap: OffsetMap) = leaseManager ! Flush(groupId, topic, partition, offsetMap)
 
   @tailrec
   final def deliverBuf(): Unit = {
@@ -128,6 +115,16 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer) extends Act
     )
   }
 
-  def stop() = context.stop(self)
+  def stop() = {
+    if (isRunning) {
+      client ! PoisonPill
+      context.stop(self)
+      isRunning = false
+    }
+  }
 
+  def start() = {
+    isRunning = true
+    client ! ConsumeCommand.Start
+  }
 }

@@ -8,7 +8,6 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.joda.time.{DateTime, DateTimeZone}
-import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -25,14 +24,24 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val timestamp = new DateTime(DateTimeZone.UTC)
 
   // Map of topic-partition to offset count
-  val offsetMap = OffsetMap(Map(TopicPartition(topic, partitionId.toInt) -> 10))
-  val offsetTracking = offsetMap.toCommitRequestInfo(leaseHolder, Some(leaseId), timestamp)
+  val offsetMap = OffsetMap(Map(TopicPartition(topic, partitionId).hash -> 10))
 
   val commitHandler = mock[BaseHandler]
   val idGenerator = mock[IdGenerator]
+  val offsetTracking = {
+    OffsetTracking(
+      partitionId = partitionId,
+      checkpointId = "10",
+      leaseHolder = leaseHolder,
+      leaseCounter = Option(0),
+      leaseTimestamp = now,
+      leaseId = Option(leaseId)
+    )
+  }
 
-  def createLeaseManager = LeaseManager(leaseHolder, commitHandler, 100.seconds, idGenerator)
+  def createLeaseManager = new LeaseManagerImpl(leaseHolder, commitHandler, 100.seconds, None, idGenerator)
   def setupIdGenerator = (idGenerator.generate _).expects.returning(leaseId)
+
 
   "LeaseManager" should "create a new instance with a lease id property" in {
     setupIdGenerator
@@ -43,22 +52,45 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     leaseManager.counter should === (Map.empty)
   }
 
-  it should "be able to create an entry for the commit handler, given the correct parameters passed" in {
+  it should "be able to flush a commit, given nothing exists" in {
     setupIdGenerator
 
-    (commitHandler.put(_: String, _: String, _: Seq[OffsetTracking]))
+    (commitHandler.put(_: String, _: String, _: OffsetTracking))
       .expects(groupId, topic, *)
-      .returning(Future.successful(offsetTracking.map(_.copy(leaseCounter = Option(1)))))
+      .returning(Future.successful(offsetTracking.copy(leaseCounter = Option(1))))
+
+    (commitHandler.get(_: String, _: String, _: String))
+      .expects(groupId, topic, partitionId)
+      .returning(Future.successful(None))
 
     val leaseManager = createLeaseManager
-    leaseManager.commit(groupId, topic, offsetMap).futureValue should === (())
+    leaseManager.flush(groupId, topic, partitionId, offsetMap).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map(partitionId -> 1))
   }
 
-  it should "return true for isLeaseAvailable given nothing exist" in {
+  it should "be able to flush a commit, given a previous lease already exists" in {
+    setupIdGenerator
+
+    (commitHandler.put(_: String, _: String, _: OffsetTracking))
+      .expects(groupId, topic, *)
+      .returning(Future.successful(offsetTracking.copy(leaseCounter = Option(2))))
+
+    (commitHandler.get(_: String, _: String, _: String))
+      .expects(groupId, topic, partitionId)
+      .returning(Future.successful(Some(offsetTracking.copy(leaseCounter = Option(1)))))
+
+    val leaseManager = createLeaseManager
+    leaseManager.flush(groupId, topic, partitionId, offsetMap).futureValue should === (true)
+
+    leaseManager.leaseId should === (leaseId)
+    leaseManager.leaseHolder should === (leaseHolder)
+    leaseManager.counter should === (Map(partitionId -> 2))
+  }
+
+  it should "return true for requestLease given nothing exist" in {
     setupIdGenerator
 
     (commitHandler.get(_: String, _: String, _: String))
@@ -66,84 +98,51 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
       .returning(Future.successful(None))
 
     val leaseManager = createLeaseManager
-    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
+    leaseManager.requestLease(groupId, topic, partitionId).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
     leaseManager.leaseHolder should === (leaseHolder)
     leaseManager.counter should === (Map.empty)
   }
 
-  it should "return true for isLeaseAvailable given the partitonId doesnt exist" in {
+  it should "return true for valid validation condition" in {
     setupIdGenerator
 
-    (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
-      .returning(Future.successful(None))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minus(400))
 
     val leaseManager = createLeaseManager
-    leaseManager.counter("some-other-partition-id") = 10
-    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
-
-    leaseManager.leaseId should === (leaseId)
-    leaseManager.leaseHolder should === (leaseHolder)
-    leaseManager.counter should === (Map("some-other-partition-id" -> 10))
+    leaseManager.counter(partitionId) = 2
+    leaseManager.validate(offset) should === (true)
   }
 
-  it should "return true for isLeaseAvailable given the counter matches and lease time is later than now" in {
+  it should "return true for validation if lease time stamp is after now but counter is the same" in {
     setupIdGenerator
 
-    val currentOffsetTracking = offsetTracking.head.copy(leaseCounter = Some(10), leaseTimestamp = now.plus(600))
-    (commitHandler.put(_: String, _: String, _: Seq[OffsetTracking]))
-      .expects(groupId, topic, *)
-      .returning(Future.successful(Seq(currentOffsetTracking)))
-
-    (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
-      .returning(Future.successful(Some(currentOffsetTracking)))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plus(400))
 
     val leaseManager = createLeaseManager
-    leaseManager.counter(partitionId) = 10
-    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (true)
-
-    leaseManager.leaseId should === (leaseId)
-    leaseManager.leaseHolder should === (leaseHolder)
-    leaseManager.counter should === (Map(partitionId -> 10))
+    leaseManager.counter(partitionId) = 2
+    leaseManager.validate(offset) should === (true)
   }
 
-  it should "return false for isLeaseAvailable given the counter matches but lease time is after now" in {
+  it should "return true for validation if time is before now, but counter differ (i.e. stale lease)" in {
     setupIdGenerator
 
-    val currentOffsetTracking = offsetTracking.head.copy(leaseCounter = Some(10), leaseTimestamp = now.minus(600))
-
-    (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
-      .returning(Future.successful(Some(currentOffsetTracking)))
-
-    val leaseManager = createLeaseManager
-    leaseManager.counter(partitionId) = 10
-    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (false)
-
-    leaseManager.leaseId should === (leaseId)
-    leaseManager.leaseHolder should === (leaseHolder)
-    leaseManager.counter should === (Map(partitionId -> 10))
-  }
-
-  it should "return false for isLeaseAvailable given lease time is after now, but the counter does not match" in {
-    setupIdGenerator
-
-    val osTracking = offsetTracking.head.copy(leaseCounter = Some(10), leaseTimestamp = now.plus(600))
-
-    (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
-      .returning(Future.successful(Some(osTracking)))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minus(400))
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 5
-    leaseManager.isLeaseAvailable(groupId, topic, partitionId).futureValue should === (false)
+    leaseManager.validate(offset) should === (true)
+  }
 
-    leaseManager.leaseId should === (leaseId)
-    leaseManager.leaseHolder should === (leaseHolder)
-    leaseManager.counter should === (Map(partitionId -> 5))
+  it should "return false for validation if lease counters dont match lease time stamp is after now" in {
+    setupIdGenerator
+
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plus(400))
+
+    val leaseManager = createLeaseManager
+    leaseManager.counter(partitionId) = 5
+    leaseManager.validate(offset) should === (false)
   }
 
   private def now = new DateTime(DateTimeZone.UTC)

@@ -7,11 +7,12 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSource
 import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, Cursor, Offset, ProducerMessage}
 import de.zalando.react.nakadi.client.models.{DataOpEnum, Event, EventPayload, MetaData}
+import de.zalando.react.nakadi.commit.OffsetTracking
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 

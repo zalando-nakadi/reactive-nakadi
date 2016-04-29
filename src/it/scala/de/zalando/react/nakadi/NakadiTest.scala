@@ -4,17 +4,18 @@ import akka.testkit.TestKit
 import akka.stream.ActorMaterializer
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.stream.actor.WatermarkRequestStrategy
+
 import play.api.libs.json.Json
-import com.typesafe.config.{Config, ConfigFactory}
-import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
-import de.zalando.react.nakadi.client.NakadiClientImpl
-import de.zalando.react.nakadi.commit.handlers.BaseHandler
-import de.zalando.react.nakadi.utils.IdGenerator
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OptionValues}
 
+import de.zalando.react.nakadi.client.NakadiClientImpl
+import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
+
 import scala.concurrent.duration._
+import scala.de.zalando.react.nakadi.InMemoryCommitHandler
 
 
 trait NakadiTest extends FlatSpec
@@ -68,7 +69,7 @@ trait NakadiTest extends FlatSpec
       topic = topic,
       groupId = group,
       partition = "0", // TODO - remove this, should be auto assigned
-      commitHandler = mock[BaseHandler]
+      commitHandler = InMemoryCommitHandler
     ).commitInterval(2.seconds).readFromStartOfStream()
   }
 

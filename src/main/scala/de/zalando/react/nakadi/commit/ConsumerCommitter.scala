@@ -66,7 +66,7 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
 
   def registerCommit(msg: ConsumerMessage): Unit = {
     log.debug(s"Received commit request for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}")
-    val topicPartition = TopicPartition(msg.topic.toString, msg.cursor.partition.toInt)
+    val topicPartition = TopicPartition(msg.topic, msg.cursor.partition)
     val last = partitionOffsetMap.lastOffset(topicPartition)
     updateOffsetIfLarger(msg, last)
   }
@@ -75,7 +75,7 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
     val msgOffset = msg.cursor.offset.toLong
     if (msgOffset > last) {
       log.debug(s"Registering commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered = $last")
-      val topicPartition = TopicPartition(msg.topic.toString, msg.cursor.partition.toInt)
+      val topicPartition = TopicPartition(msg.topic, msg.cursor.partition)
       partitionOffsetMap = partitionOffsetMap.plusOffset(topicPartition, msgOffset)
       scheduleFlush()
     } else {

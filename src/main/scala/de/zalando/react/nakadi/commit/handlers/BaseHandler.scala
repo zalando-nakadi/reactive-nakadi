@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 trait BaseHandler {
 
-  def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]]
+  def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking]
 
   def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]]
 }

@@ -1,36 +1,55 @@
 package de.zalando.react.nakadi
 
-import akka.actor.SupervisorStrategy._
-import akka.actor.{Actor, ActorLogging, ActorRef, OneForOneStrategy, Props}
+import akka.actor.{Actor, ActorLogging, Props}
+import de.zalando.react.nakadi.commit.OffsetMap
 
-import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 
 object LeaseManagerActor {
 
-  def props(consumerProperties: ConsumerProperties) = {
-    Props(new LeaseManagerActor(consumerProperties))
+  case object LeaseAvailable
+  case object LeaseUnavailable
+  case class RequestLease(groupId: String, topic: String, partitionId: String)
+  case class ReleaseLease(groupId: String, topic: String, partitionId: String)
+  case class Flush(groupId: String, topic: String, partitionId: String, offsetMap: OffsetMap)
+
+  def props(leaseManager: LeaseManager) = {
+    Props(new LeaseManagerActor(leaseManager))
   }
 }
 
-class LeaseManagerActor(consumerProperties: ConsumerProperties) extends Actor with ActorLogging {
-
-  private val leaseManager = LeaseManager(
-    consumerProperties.leaseHolder, consumerProperties.commitHandler, consumerProperties.staleLeaseDelta
-  )
-
-  private def registerNakadiPublisher(consumerActor: ActorRef, props: Props) = {
-    log.info(s"Registering Nakadi Publisher $consumerActor")
-    consumerActor ! context.actorOf(props, "nakadi-consumer")
-  }
+class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogging {
+  import context.dispatcher  // TODO setup different execution contexts for aws access
+  import LeaseManagerActor._
 
   override def receive: Receive = {
-    case p: Props => registerNakadiPublisher(sender, p)
+    case msg: Flush => flush(msg)
+    case msg: RequestLease  => requestLease(msg)
+    case msg: ReleaseLease  => releaseLease(msg)
   }
 
-  override val supervisorStrategy = {
-    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1.minute) {
-      case _: Exception => Escalate
+  private def flush(msg: Flush) = {
+    leaseManager.flush(msg.groupId, msg.topic, msg.partitionId, msg.offsetMap).onComplete {
+      case Failure(err) => log.error(err, "AWS Error:")
+      case Success(_) => sender ! LeaseAvailable
+    }
+  }
+
+  private def requestLease(msg: RequestLease): Unit = {
+    val senderRef = sender
+    leaseManager.requestLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
+      case Failure(err) => log.error(err, "AWS Error:")
+      case Success(status) if status => senderRef ! LeaseAvailable
+      case Success(status) if !status => senderRef ! LeaseUnavailable
+    }
+  }
+
+  private def releaseLease(msg: ReleaseLease): Unit = {
+    val senderRef = sender
+    leaseManager.releaseLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
+      case Failure(err) => log.error(err, "AWS Error:")
+      case Success(status) => senderRef ! LeaseUnavailable
     }
   }
 }

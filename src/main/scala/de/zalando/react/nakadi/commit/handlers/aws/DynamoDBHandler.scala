@@ -40,15 +40,11 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
       .getItem(PartitionIdKey, partitionId)).map(toOffsetTracking)
   }
 
-  override def put(groupId: String, topic: String, offsets: Seq[OffsetTracking]): Future[Seq[OffsetTracking]] = {
+  override def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking] = {
 
     withTable(groupId, topic) { table =>
-      Future.sequence {
-        offsets.map { offsetTracking =>
-          Option(table.getItem(PartitionIdKey, offsetTracking.partitionId))
-            .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offsetTracking)
-        }
-      }
+      Option(table.getItem(PartitionIdKey, offset.partitionId))
+        .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offset)
     }
   }
 
@@ -56,7 +52,6 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
     val valueMap = new ValueMap()
       .withString(":cidval", offsetTracking.checkpointId)
       .withString(":lhval", offsetTracking.leaseHolder)
-      .withNumber(":lcval", 1)
       .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
 
     var leaseIdKey = ""
@@ -65,16 +60,28 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
       leaseIdKey = s", $LeaseIdKey = :lidval"
     }
 
+    // Allow for overwriting of lease counter
+    val countExpression = offsetTracking.leaseCounter.fold {
+      valueMap.withNumber(":lcval", 1)
+      "leaseCounter + :lcval"
+    } { count =>
+      valueMap.withNumber(":lcval", count)
+      " :lcval"
+    }
+
+    val expression = {
+      s"""
+         |SET
+         | $CheckpointIdKey = :cidval,
+         | $LeaseHolderKey = :lhval,
+         | $LeaseCounterKey = $countExpression,
+         | $LeaseTimestampKey = :ltsval $leaseIdKey
+         | """.stripMargin
+    }
+
     table.updateItem(new UpdateItemSpec()
       .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
-      .withUpdateExpression(
-        s"""
-           |SET
-           | $CheckpointIdKey = :cidval,
-           | $LeaseHolderKey = :lhval,
-           | $LeaseCounterKey = leaseCounter + :lcval,
-           | $LeaseTimestampKey = :ltsval $leaseIdKey
-           | """.stripMargin)
+      .withUpdateExpression(expression)
       .withValueMap(valueMap))
     toOffsetTracking(table.getItem(PartitionIdKey, offsetTracking.partitionId))
   }
