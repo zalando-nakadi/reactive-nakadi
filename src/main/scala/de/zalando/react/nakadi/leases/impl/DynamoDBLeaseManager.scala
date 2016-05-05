@@ -225,6 +225,21 @@ class DynamoDBLeaseManager(system: ActorSystem, awsProvider: AWSProvider) extend
     }
   }
 
+  override def commitLease(groupId: String, topic: String, lease: Lease): Future[Option[Lease]] = {
+
+    updateLease(groupId, topic, UpdateLease(
+      lease.partitionId,
+      Option(lease.checkpointId),
+      lease.leaseHolder,
+      lease.leaseTimestamp,
+      lease.leaseCounter,
+      Option(lease.leaseId))
+    ).map {
+      case true => Option(lease.copy(leaseCounter = lease.leaseCounter + 1))
+      case false => None
+    }
+  }
+
   override def renewLease(groupId: String, topic: String, lease: Lease): Future[Option[Lease]] = {
 
     updateLease(groupId, topic, UpdateLease(

@@ -21,6 +21,8 @@ trait LeaseManager {
 
   def takeLease(groupId: String, topic: String, lease: Lease): Future[Option[Lease]]
 
+  def commitLease(groupId: String, topic: String, lease: Lease): Future[Option[Lease]]
+
   def evictLease(groupId: String, topic: String, lease: Lease): Future[Option[Lease]]
 
 }
