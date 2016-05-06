@@ -40,21 +40,17 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
   private val MaxBufferSize = 100
   private var buf = Vector.empty[StringConsumerMessage]
 
-  override def preStart() = leaseManager ! RequestLease(groupId, topic, partition)
-
-  def releaseLease() = leaseManager ! ReleaseLease(groupId, topic, partition)
+  override def preStart() = start()
 
   override def receive: Receive = {
 
     case ConsumeCommand.Init                              => registerSupervisor(sender())
     case Some(rawEvent: EventStreamBatch) if isActive     => readDemandedItems(rawEvent)
     case Request(_)                                       => deliverBuf()
-    case SubscriptionTimeoutExceeded                      => releaseLease()
-    case Cancel                                           => releaseLease()
-    case NakadiActorPublisher.Stop                        => releaseLease()
+    case SubscriptionTimeoutExceeded                      => stop()
+    case Cancel                                           => stop()
+    case NakadiActorPublisher.Stop                        => stop()
     case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
-    case LeaseAvailable                                   => start()
-    case LeaseUnavailable                                 => stop()
   }
 
   private def registerSupervisor(ref: ActorRef) = {
