@@ -4,7 +4,7 @@ import de.zalando.react.nakadi.commit.OffsetTracking
 
 import scala.concurrent.Future
 
-trait BaseHandler {
+trait BaseLeaseManager {
 
   def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking]
 

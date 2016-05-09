@@ -1,13 +1,13 @@
 package scala.de.zalando.react.nakadi
 
 import de.zalando.react.nakadi.commit.OffsetTracking
-import de.zalando.react.nakadi.commit.handlers.BaseHandler
+import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
 
 
-object InMemoryCommitHandler extends BaseHandler {
+object InMemoryCommitLeaseManager extends BaseLeaseManager {
 
   private val store = scala.collection.concurrent.TrieMap.empty[String, String]
   private def generateKey(group: String, topic: String, partition: String) = s"$group-$topic-$partition"

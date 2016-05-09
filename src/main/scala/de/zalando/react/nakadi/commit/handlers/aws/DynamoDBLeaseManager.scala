@@ -2,7 +2,7 @@ package de.zalando.react.nakadi.commit.handlers.aws
 
 import akka.actor.ActorSystem
 import de.zalando.react.nakadi.commit.OffsetTracking
-import de.zalando.react.nakadi.commit.handlers.BaseHandler
+import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.document.{Item, Table}
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
@@ -13,20 +13,20 @@ import org.joda.time.{DateTime, DateTimeZone}
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
-object DynamoDBHandler {
+object DynamoDBLeaseManager {
   def apply(system: ActorSystem,
             leaseProperties: LeaseProperties,
-            provider: Provider): DynamoDBHandler = {
-    new DynamoDBHandler(system, leaseProperties, provider)
+            provider: Provider): DynamoDBLeaseManager = {
+    new DynamoDBLeaseManager(system, leaseProperties, provider)
   }
 
   def apply(system: ActorSystem,
-            leaseProperties: LeaseProperties): DynamoDBHandler = {
-    new DynamoDBHandler(system, leaseProperties, new ClientProvider(leaseProperties))
+            leaseProperties: LeaseProperties): DynamoDBLeaseManager = {
+    new DynamoDBLeaseManager(system, leaseProperties, new ClientProvider(leaseProperties))
   }
 }
 
-class DynamoDBHandler(system: ActorSystem, leaseProperties: LeaseProperties, provider: Provider) extends BaseHandler {
+class DynamoDBLeaseManager(system: ActorSystem, leaseProperties: LeaseProperties, provider: Provider) extends BaseLeaseManager {
 
   import system.dispatcher
 
