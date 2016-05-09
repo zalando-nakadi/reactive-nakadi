@@ -1,10 +1,10 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.properties
 
 import de.zalando.react.nakadi.NakadiMessages._
 import de.zalando.react.nakadi.commit.handlers.BaseHandler
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
 object ConsumerProperties {

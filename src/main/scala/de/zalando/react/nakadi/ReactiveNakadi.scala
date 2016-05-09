@@ -1,12 +1,11 @@
 package de.zalando.react.nakadi
 
 import org.reactivestreams.{Publisher, Subscriber}
-
-import akka.actor.{PoisonPill, ActorRef, ActorSystem}
-import akka.stream.actor.{ActorSubscriber, RequestStrategy, WatermarkRequestStrategy, ActorPublisher}
-
-import de.zalando.react.nakadi.commit.{NakadiSink, CommitSink}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill}
+import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
+import de.zalando.react.nakadi.commit.{CommitSink, NakadiSink}
 import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
+import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
 
 
 class ReactiveNakadi {

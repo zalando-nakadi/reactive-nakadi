@@ -1,6 +1,7 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.properties
 
 import scala.concurrent.duration._
+
 
 case class ServerProperties(
   host: String,

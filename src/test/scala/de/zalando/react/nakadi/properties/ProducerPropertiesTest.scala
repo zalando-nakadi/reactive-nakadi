@@ -1,10 +1,8 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.properties
 
 import java.util.UUID
 
-import scala.concurrent.duration._
-
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 class ProducerPropertiesTest extends FlatSpec with Matchers {
 

@@ -4,15 +4,14 @@ import akka.testkit.TestKit
 import akka.stream.ActorMaterializer
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.stream.actor.WatermarkRequestStrategy
-
 import play.api.libs.json.Json
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OptionValues}
-
 import de.zalando.react.nakadi.client.NakadiClientImpl
 import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
+import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties, ServerProperties}
 
 import scala.concurrent.duration._
 import scala.de.zalando.react.nakadi.InMemoryCommitHandler

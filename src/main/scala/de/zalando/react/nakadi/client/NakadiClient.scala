@@ -1,8 +1,8 @@
 package de.zalando.react.nakadi.client
 
 import akka.actor.{ActorRef, ActorSystem}
-import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
-import de.zalando.react.nakadi.NakadiMessages.{ProducerMessage, EventTypeMessage}
+import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
+import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
 
 import scala.concurrent.Future
 

@@ -2,10 +2,9 @@ package de.zalando.react.nakadi.commit
 
 import akka.actor._
 import akka.actor.Status.Failure
-
-import de.zalando.react.nakadi.ConsumerProperties
 import de.zalando.react.nakadi.NakadiMessages.ConsumerMessage
-import de.zalando.react.nakadi.NakadiActorPublisher.{CommitOffsets, CommitAck}
+import de.zalando.react.nakadi.NakadiActorPublisher.{CommitAck, CommitOffsets}
+import de.zalando.react.nakadi.properties.ConsumerProperties
 
 import scala.concurrent.duration._
 

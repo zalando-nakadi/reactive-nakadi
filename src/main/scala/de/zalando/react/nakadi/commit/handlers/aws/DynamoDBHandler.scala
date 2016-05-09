@@ -2,20 +2,31 @@ package de.zalando.react.nakadi.commit.handlers.aws
 
 import akka.actor.ActorSystem
 import de.zalando.react.nakadi.commit.OffsetTracking
-
 import de.zalando.react.nakadi.commit.handlers.BaseHandler
-
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.document.{Item, Table}
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec
-import org.joda.time.{DateTimeZone, DateTime}
+import de.zalando.react.nakadi.properties.LeaseProperties
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
+object DynamoDBHandler {
+  def apply(system: ActorSystem,
+            leaseProperties: LeaseProperties,
+            provider: Provider): DynamoDBHandler = {
+    new DynamoDBHandler(system, leaseProperties, provider)
+  }
 
-class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, clientProvider: Option[ClientProvider] = None) extends BaseHandler {
+  def apply(system: ActorSystem,
+            leaseProperties: LeaseProperties): DynamoDBHandler = {
+    new DynamoDBHandler(system, leaseProperties, new ClientProvider(leaseProperties))
+  }
+}
+
+class DynamoDBHandler(system: ActorSystem, leaseProperties: LeaseProperties, provider: Provider) extends BaseHandler {
 
   import system.dispatcher
 
@@ -27,8 +38,7 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
   val LeaseIdKey = "leaseId"
 
   private val log = system.log
-  private lazy val awsConfiguration: AWSConfig = awsConfig.fold(AWSConfig())(cnf => cnf)
-  private lazy val ddbClient = clientProvider.fold(ClientProvider(awsConfiguration.region))(provider => provider).client
+  private lazy val ddbClient = provider.client
   private val keySchema = Seq(new KeySchemaElement().withAttributeName(PartitionIdKey).withKeyType(KeyType.HASH))
   private val attributeDefinitions = Seq(new AttributeDefinition().withAttributeName(PartitionIdKey).withAttributeType(ScalarAttributeType.S))
 
@@ -114,8 +124,8 @@ class DynamoDBHandler(system: ActorSystem, awsConfig: Option[AWSConfig] = None, 
         .withAttributeDefinitions(attributeDefinitions.asJava)
         .withProvisionedThroughput(
           new ProvisionedThroughput()
-            .withReadCapacityUnits(awsConfiguration.readCapacityUnits)
-            .withWriteCapacityUnits(awsConfiguration.writeCapacityUnits)
+            .withReadCapacityUnits(leaseProperties.awsDynamoDbReadCapacityUnits)
+            .withWriteCapacityUnits(leaseProperties.awsDynamoDbWriteCapacityUnits)
         ))
       tableObj.waitForActive()
       tableObj

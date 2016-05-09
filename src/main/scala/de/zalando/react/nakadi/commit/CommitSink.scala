@@ -3,9 +3,9 @@ package de.zalando.react.nakadi.commit
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.Sink
-import de.zalando.react.nakadi.ConsumerProperties
 import de.zalando.react.nakadi.NakadiMessages.ConsumerMessage
 import de.zalando.react.nakadi.commit.ConsumerCommitter.Contract.TheEnd
+import de.zalando.react.nakadi.properties.ConsumerProperties
 
 
 private[nakadi] object CommitSink {

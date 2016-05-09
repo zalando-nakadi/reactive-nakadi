@@ -10,6 +10,7 @@ import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBHandler
 import de.zalando.react.nakadi.NakadiMessages._
 import org.joda.time.DateTime
 import com.typesafe.config.ConfigFactory
+import de.zalando.react.nakadi.properties.{ConsumerProperties, LeaseProperties, ServerProperties}
 import play.api.libs.json.Json
 
 
@@ -32,7 +33,7 @@ object TestApp extends App {
     topic = "buffalo-test-topic",
     groupId = "some-group",
     partition = "6",
-    commitHandler = new DynamoDBHandler(system),
+    commitHandler = DynamoDBHandler(system, LeaseProperties.apply),
     offset = Some(BeginOffset)
   ))
 

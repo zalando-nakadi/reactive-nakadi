@@ -1,4 +1,4 @@
-package de.zalando.react.nakadi
+package de.zalando.react.nakadi.properties
 
 import java.util.UUID
 

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
 import de.zalando.react.nakadi.client.providers._
-import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties, ServerProperties}
+import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties, ServerProperties}
 
 import scala.concurrent.Future
 

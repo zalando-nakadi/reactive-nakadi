@@ -4,15 +4,19 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import de.zalando.react.nakadi.properties.LeaseProperties
 
 
-case class ClientProvider(client: DynamoDB)
+trait Provider {
+  def client: DynamoDB
+  def leaseProperties: LeaseProperties
+}
 
-object ClientProvider {
+class ClientProvider(override val leaseProperties: LeaseProperties) extends Provider {
 
-  def apply(region: String, credentialsProvider: Option[ProfileCredentialsProvider] = None): ClientProvider = {
-    val client = new AmazonDynamoDBClient(credentialsProvider.fold(new ProfileCredentialsProvider())(cred => cred))
-    client.withRegion(Regions.fromName(region))
-    new ClientProvider(client = new DynamoDB(client))
+  override val client: DynamoDB = {
+    val c = new AmazonDynamoDBClient(new ProfileCredentialsProvider())
+    c.withRegion(Regions.fromName(leaseProperties.awsCommitRegion))
+    new DynamoDB(c)
   }
 }

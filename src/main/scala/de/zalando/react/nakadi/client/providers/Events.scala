@@ -4,15 +4,17 @@ import akka.stream._
 import akka.util.ByteString
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.MediaTypes._
-import akka.actor.{ActorContext, ActorRef}
 import akka.http.scaladsl.model.Uri.Query
+import akka.actor.{ActorContext, ActorRef}
+import akka.http.scaladsl.model.MediaTypes._
 import akka.stream.scaladsl.{Flow, Framing, GraphDSL, RunnableGraph, Sink, Source}
 import akka.http.scaladsl.model.headers.{OAuth2BearerToken, RawHeader}
+
 import de.zalando.react.nakadi.client._
 import de.zalando.react.nakadi.client.models._
 import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
-import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
+import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
+
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
