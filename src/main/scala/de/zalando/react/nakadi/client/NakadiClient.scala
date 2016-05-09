@@ -9,9 +9,9 @@ import scala.concurrent.Future
 
 trait NakadiClient {
 
-  def postEventType(eventTypeMessage: EventTypeMessage): Future[Boolean]
+  def postEventType(eventTypeMessage: EventTypeMessage): Future[Unit]
 
-  def publishEvent(producerMessage: ProducerMessage): Future[Boolean]
+  def publishEvent(producerMessage: ProducerMessage): Future[Unit]
 
   def listenForEvents(receiverActorRef: ActorRef): Unit
 }

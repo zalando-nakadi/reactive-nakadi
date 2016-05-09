@@ -15,7 +15,7 @@ import play.api.libs.json.Json
 
 object TestApp extends App {
 
-  def token() = ""
+  val tokenVal = "050e4925-fcb4-4e7d-8b1e-b6eee80c1b3c"
 
   val config = ConfigFactory.load()
 
@@ -23,20 +23,26 @@ object TestApp extends App {
   implicit val materializer = ActorMaterializer()
 
   val nakadi = new ReactiveNakadi()
+  val server = ServerProperties(
+    "nakadi-sandbox.aruha-test.zalan.do", port = 443, isConnectionSSL = true)
 
-  val publisher = nakadi.consumeWithOffsetSink(ConsumerProperties(
-    server = "http://192.168.99.100:8080/",
-    tokenProvider = None,
-    topic = "reactive-nakadi-testing",
+  val publisher = nakadi.consume(ConsumerProperties(
+    serverProperties = server,
+    tokenProvider = Option(() => tokenVal),
+    topic = "buffalo-test-topic",
     groupId = "some-group",
-    partition = "0",
+    partition = "6",
     commitHandler = new DynamoDBHandler(system),
-    //offset = Some(BeginOffset),
-    acceptAnyCertificate = true
+    offset = Some(BeginOffset)
   ))
 
   Source
-    .fromPublisher(publisher.publisher)
-    .to(publisher.offsetCommitSink)
+    .fromPublisher(publisher)
+//    .map { msg =>
+//      Thread.sleep(1000)
+//      msg
+//    }
+    .map(println)
+    .to(Sink.ignore)
     .run()
 }

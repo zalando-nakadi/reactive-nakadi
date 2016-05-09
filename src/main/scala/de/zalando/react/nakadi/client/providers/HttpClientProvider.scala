@@ -1,36 +1,55 @@
 package de.zalando.react.nakadi.client.providers
 
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.{SSLContext, TrustManager, X509TrustManager}
+
 import akka.actor.ActorContext
-import akka.stream.ActorMaterializer
-import org.asynchttpclient.DefaultAsyncHttpClientConfig
+import akka.http.scaladsl.Http.OutgoingConnection
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.settings.ClientConnectionSettings
+import akka.http.scaladsl.{Http, HttpsConnectionContext}
+import akka.stream.scaladsl.Flow
 
-import play.api.libs.ws.WSClient
-import play.api.libs.ws.ahc.AhcWSClient
-
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.duration.Duration
 
 
-trait ClientProvider {
-  def get: WSClient
-}
+class HttpClientProvider(actorContext: ActorContext,
+                         server: String, port: Int,
+                         isConnectionSSL: Boolean = false,
+                         acceptAnyCertificate: Boolean = false,
+                         connectionTimeout: FiniteDuration) {
 
-class HttpClientProvider(connectionTimeout: Duration = 5000.milliseconds,
-                         acceptAnyCertificate: Boolean = false)(implicit val materializer: ActorMaterializer) extends ClientProvider {
+  val http = Http(actorContext.system)
 
-  override val get: AhcWSClient = {
-    val builder = new DefaultAsyncHttpClientConfig
-      .Builder()
-      .setHandshakeTimeout(connectionTimeout.length.toInt)
-      .setAcceptAnyCertificate(acceptAnyCertificate)
+  private val settings = {
+    ClientConnectionSettings
+      .apply(actorContext.system)
+      .withConnectingTimeout(connectionTimeout)
+      .withIdleTimeout(Duration.Inf)
+  }
 
-      // Bit of a hack - set the read time out to the max
-      // so it does not stop consuming data from the stream
-      // If we want to set a time out on the stream, we should
-      // use set the relevant Nakadi parameter.
-      .setReadTimeout(Int.MaxValue)
-      .build()
-    new AhcWSClient(builder)
+  val connection: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = {
+
+    isConnectionSSL match {
+      case true =>
+        val sslContext = if (acceptAnyCertificate) SSLContext.getDefault else {
+
+          val permissiveTrustManager: TrustManager = new X509TrustManager() {
+            override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+            override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+            override def getAcceptedIssuers(): Array[X509Certificate] = Array.empty
+          }
+
+          val ctx = SSLContext.getInstance("TLS")
+          ctx.init(Array.empty, Array(permissiveTrustManager), new SecureRandom())
+          ctx
+        }
+        http.outgoingConnectionHttps(server, port, new HttpsConnectionContext(sslContext), settings = settings)
+      case false =>
+        http.outgoingConnection(server, port, settings = settings)
+    }
   }
 
 }

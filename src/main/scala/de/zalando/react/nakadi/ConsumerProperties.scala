@@ -9,16 +9,14 @@ import scala.concurrent.duration._
 
 object ConsumerProperties {
 
-  def apply(
-    server: String,
-    tokenProvider: Option[() => String],
-    topic: String,
-    groupId: String,
-    partition: String,
-    commitHandler: BaseHandler
-  ): ConsumerProperties = {
+  def apply(serverProperties: ServerProperties,
+            tokenProvider: Option[() => String],
+            topic: String,
+            groupId: String,
+            partition: String,
+            commitHandler: BaseHandler): ConsumerProperties = {
     new ConsumerProperties(
-      server = server,
+      serverProperties = serverProperties,
       tokenProvider = tokenProvider,
       topic = topic,
       groupId = groupId,
@@ -29,7 +27,7 @@ object ConsumerProperties {
 }
 
 case class ConsumerProperties(
-  server: String,
+  serverProperties: ServerProperties,
   tokenProvider: Option[() => String],
   topic: String,
   groupId: String,
@@ -37,15 +35,12 @@ case class ConsumerProperties(
   commitHandler: BaseHandler,
   offset: Option[Offset] = None,
   commitInterval: FiniteDuration = 30.seconds,
-  connectionTimeout: FiniteDuration = 5000.milliseconds,
   batchLimit: Int = 0,
   batchFlushTimeoutInSeconds: FiniteDuration = 30.seconds,
   streamLimit: Int = 0,
   streamTimeoutInSeconds: FiniteDuration = 0.seconds,
   streamKeepAliveLimit: Int = 0,
   pollParallelism: Int = 0,
-  autoReconnect: Boolean = false,
-  acceptAnyCertificate: Boolean = true,
   staleLeaseDelta: FiniteDuration = 300.seconds,
   leaseHolder: String = "test-lease-holder" // FIXME - set this to make sense
 ) {

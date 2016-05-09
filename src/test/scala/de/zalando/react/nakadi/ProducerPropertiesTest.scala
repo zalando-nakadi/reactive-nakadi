@@ -12,24 +12,22 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
   def token = "random_token"
   val server = "http://some.server.zalando.net:9089/"
   val topic = uuid()
+  val serverProperties = ServerProperties(host = server, port = 8080, isConnectionSSL = false)
 
   "ProducerProperties" should "handle simple case" in {
     val props = ProducerProperties(
-      server = server,
+      serverProperties = serverProperties,
       tokenProvider = Option(() => token),
       topic = topic
     )
-    props.server should === (server)
+    props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
-    props.retries should === (None)
-    props.acceptAnyCertificate should === (true)
-    props.connectionTimeout should === (1000.milliseconds)
   }
 
   it should "handle an empty token provider" in {
     val props = ProducerProperties(
-      server = server,
+      serverProperties = serverProperties,
       tokenProvider = None,
       topic = topic
     )
@@ -38,16 +36,13 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
 
   it should "also be able to set message send max retries" in {
     val props = ProducerProperties(
-      server = server,
+      serverProperties = serverProperties,
       tokenProvider = Option(() => token),
       topic = topic
-    ).messageSendMaxRetries(5)
+    )
 
-    props.server should === (server)
+    props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
     props.topic should === (topic)
-    props.retries should === (Some(5))
-    props.acceptAnyCertificate should === (true)
-    props.connectionTimeout should === (1000.milliseconds)
   }
 }

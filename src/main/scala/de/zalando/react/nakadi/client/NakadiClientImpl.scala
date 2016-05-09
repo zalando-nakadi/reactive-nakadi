@@ -3,19 +3,15 @@ package de.zalando.react.nakadi.client
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import de.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
-import de.zalando.react.nakadi.client.models.EventType
 import de.zalando.react.nakadi.client.providers._
-import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties}
+import de.zalando.react.nakadi.{ConsumerProperties, ProducerProperties, ServerProperties}
 
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 
 
 case class Properties(
-  server: String,
+  serverProperties: ServerProperties,
   tokenProvider: Option[() => String],
-  acceptAnyCertificate: Boolean,
-  connectionTimeout: Duration,
   consumerProperties: Option[ConsumerProperties] = None,
   producerProperties: Option[ProducerProperties] = None
 )
@@ -24,10 +20,8 @@ object NakadiClientImpl {
 
   def props(consumerProperties: ConsumerProperties) = {
     val p = Properties(
-      server = consumerProperties.server,
+      serverProperties = consumerProperties.serverProperties,
       tokenProvider = consumerProperties.tokenProvider,
-      acceptAnyCertificate = consumerProperties.acceptAnyCertificate,
-      connectionTimeout = consumerProperties.connectionTimeout,
       consumerProperties = Option(consumerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -35,10 +29,8 @@ object NakadiClientImpl {
 
   def props(producerProperties: ProducerProperties) = {
     val p = Properties(
-      server = producerProperties.server,
+      serverProperties = producerProperties.serverProperties,
       tokenProvider = producerProperties.tokenProvider,
-      acceptAnyCertificate = producerProperties.acceptAnyCertificate,
-      connectionTimeout = producerProperties.connectionTimeout,
       producerProperties = Option(producerProperties)
     )
     Props(new NakadiClientImpl(p))
@@ -50,8 +42,18 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with ActorLogging
   with NakadiClient {
 
-  final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
-  val clientProvider = new HttpClientProvider(properties.connectionTimeout, properties.acceptAnyCertificate)
+  final implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system))
+
+  val clientProvider = new HttpClientProvider(
+    actorContext = context,
+    server = properties.serverProperties.host,
+    port = properties.serverProperties.port,
+    isConnectionSSL = properties.serverProperties.isConnectionSSL,
+    acceptAnyCertificate = properties.serverProperties.acceptAnyCertificate,
+    connectionTimeout = properties.serverProperties.connectionTimeout
+  )
+
+  override def postStop() = clientProvider.http.shutdownAllConnectionPools()
 
   override def receive: Receive = {
     case ConsumeCommand.Start => listenForEvents(sender())
@@ -59,12 +61,12 @@ class NakadiClientImpl(val properties: Properties) extends Actor
     case eventTypeMessage: EventTypeMessage => postEventType(eventTypeMessage: EventTypeMessage)
   }
 
-  override def postEventType(eventTypeMessage: EventTypeMessage): Future[Boolean] = {
+  override def postEventType(eventTypeMessage: EventTypeMessage): Future[Unit] = {
     val postEvents = new PostEventType(properties, context, log, clientProvider)
     postEvents.post(eventTypeMessage)
   }
 
-  override def publishEvent(producerMessage: ProducerMessage): Future[Boolean] = {
+  override def publishEvent(producerMessage: ProducerMessage): Future[Unit] = {
     val p = properties.producerProperties.getOrElse(sys.error("Producer Properties cannon be None"))
     val produceEvents = new ProduceEvents(p, context, log, clientProvider)
     produceEvents.publish(producerMessage)

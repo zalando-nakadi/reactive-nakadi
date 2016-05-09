@@ -25,7 +25,7 @@ lazy val root = (project in file("."))
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
   "org.asynchttpclient" % "async-http-client" % "2.0.0-RC9",
-  "com.typesafe.play" % "play-ws_2.11" % "2.5.0",
+  "com.typesafe.play" %% "play-json" % "2.4.3",
   "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.60",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
 )
 
 // commons-logging in play-ws_2.11 and aws-java-sdk-dynamodb is conflicting with slf4j-api
-libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
+//libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
 
 // causes merge problem when building fat JAR, but is not needed
 assemblyMergeStrategy in assembly := {

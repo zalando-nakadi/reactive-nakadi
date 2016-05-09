@@ -26,7 +26,6 @@ trait NakadiTest extends FlatSpec
   with MockFactory {
 
   val config: Config = ConfigFactory.load()
-  val globalTimeout = 2.second
 
   implicit def system: ActorSystem
   implicit lazy val materializer = ActorMaterializer()
@@ -38,17 +37,19 @@ trait NakadiTest extends FlatSpec
   val topic = "nakadi-test-topic"
   val group = "nakadi-test-group"
 
-  val nakadiHost = s"http://${sys.env("DOCKER_IP")}:${config.getString("docker.nakadi.port")}"
   val nakadi = new ReactiveNakadi()
+  val serverProperties = ServerProperties(
+    host = sys.env("DOCKER_IP"),
+    port = config.getInt("docker.nakadi.port"),
+    isConnectionSSL = false
+  )
 
   lazy val nakadiClientActor: ActorRef = {
     import de.zalando.react.nakadi.client.Properties
 
     val properties = Properties(
-      server = nakadiHost,
-      tokenProvider = None,
-      acceptAnyCertificate = true,
-      connectionTimeout = globalTimeout
+      serverProperties = serverProperties,
+      tokenProvider = None
     )
 
     system.actorOf(Props(new NakadiClientImpl(properties)))
@@ -56,7 +57,7 @@ trait NakadiTest extends FlatSpec
 
   def createProducerProperties: ProducerProperties = {
     ProducerProperties(
-      server = nakadiHost,
+      serverProperties = serverProperties,
       tokenProvider = None,
       topic = topic
     )
@@ -64,7 +65,7 @@ trait NakadiTest extends FlatSpec
 
   def createConsumerProperties: ConsumerProperties = {
     ConsumerProperties(
-      server = nakadiHost,
+      serverProperties = serverProperties,
       tokenProvider = None,
       topic = topic,
       groupId = group,
