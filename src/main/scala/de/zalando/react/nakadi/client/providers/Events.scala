@@ -141,7 +141,7 @@ class ConsumeEvents(properties: ConsumerProperties,
   }
 
   def toHeader(cursor: Cursor) = {
-    import models.JsonOps._
+    import de.zalando.react.nakadi.client.models.JsonOps._
 
     log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for topic '${properties.topic}'")
     RawHeader("X-Nakadi-Cursors", Json.toJson(Seq(cursor)).toString)

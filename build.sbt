@@ -24,19 +24,19 @@ lazy val root = (project in file("."))
 
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
-  "org.asynchttpclient" % "async-http-client" % "2.0.0-RC9",
-  "com.typesafe.play" %% "play-json" % "2.4.3",
-  "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.60",
+  "com.typesafe.play" %% "play-json" % akkaVersion,
+  "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
+  "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.60",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test, it",
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
-// commons-logging in play-ws_2.11 and aws-java-sdk-dynamodb is conflicting with slf4j-api
-//libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
+// commons-logging in akka-slf4j and aws-java-sdk-dynamodb is conflicting with slf4j-api
+libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
 
 // causes merge problem when building fat JAR, but is not needed
 assemblyMergeStrategy in assembly := {
