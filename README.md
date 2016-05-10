@@ -174,7 +174,7 @@ There is still a lot of work to be done on this, the most important one being le
 
 - [x] Persistence of consumer Cursor. Nakadi plans to support consumer commits in later high level API versions
 - [x] Read checkpoint from cursor commits and continue streaming events from that point for a given partition
-- [ ] Lease management (PR avilable [here](https://github.com/zalando/reactive-nakadi/pull/6/files))
+- [ ] Lease management (PR avilable [here](https://github.com/zalando/reactive-nakadi/pull/6))
   - [x] Refactor DynamoDB for conditional updates
   - [ ] Internal validation / keep alive checks for lease manager worker
   - [ ] Lease Coordinator to manage worker consumers and lease managers
