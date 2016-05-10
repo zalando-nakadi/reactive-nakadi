@@ -25,7 +25,7 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
 
   import ConsumerCommitter.Contract._
 
-  val topic = consumerProperties.topic
+  val eventType = consumerProperties.eventType
   val commitInterval = consumerProperties.commitInterval
   var scheduledFlush: Option[Cancellable] = None
   var partitionOffsetMap = OffsetMap()
@@ -65,8 +65,8 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
 
   def registerCommit(msg: ConsumerMessage): Unit = {
     log.debug(s"Received commit request for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}")
-    val topicPartition = TopicPartition(msg.topic, msg.cursor.partition)
-    val last = partitionOffsetMap.lastOffset(topicPartition)
+    val eventTypePartition = EventTypePartition(msg.eventType, msg.cursor.partition)
+    val last = partitionOffsetMap.lastOffset(eventTypePartition)
     updateOffsetIfLarger(msg, last)
   }
 
@@ -74,8 +74,8 @@ class ConsumerCommitter(consumerActor: ActorRef, consumerProperties: ConsumerPro
     val msgOffset = msg.cursor.offset.toLong
     if (msgOffset > last) {
       log.debug(s"Registering commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered = $last")
-      val topicPartition = TopicPartition(msg.topic, msg.cursor.partition)
-      partitionOffsetMap = partitionOffsetMap.plusOffset(topicPartition, msgOffset)
+      val eventTypePartition = EventTypePartition(msg.eventType, msg.cursor.partition)
+      partitionOffsetMap = partitionOffsetMap.plusOffset(eventTypePartition, msgOffset)
       scheduleFlush()
     } else {
       log.debug(s"Skipping commit for partition ${msg.cursor.partition} and offset ${msg.cursor.offset}, last registered is $last")

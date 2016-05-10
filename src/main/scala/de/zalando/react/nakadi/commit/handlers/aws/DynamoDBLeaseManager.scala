@@ -37,33 +37,32 @@ class DynamoDBLeaseManager(system: ActorSystem, leaseProperties: LeaseProperties
   val LeaseTimestampKey = "leaseTimestamp"
   val LeaseIdKey = "leaseId"
 
-  private val log = system.log
   private lazy val ddbClient = provider.client
   private val keySchema = Seq(new KeySchemaElement().withAttributeName(PartitionIdKey).withKeyType(KeyType.HASH))
   private val attributeDefinitions = Seq(new AttributeDefinition().withAttributeName(PartitionIdKey).withAttributeType(ScalarAttributeType.S))
 
-  def tableName(groupId: String, topic: String) = s"reactive-nakadi-$topic-$groupId"
+  def tableName(groupId: String, eventType: String) = s"reactive-nakadi-$eventType-$groupId"
 
-  override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = {
+  override def get(groupId: String, eventType: String, partitionId: String): Future[Option[OffsetTracking]] = {
 
-    withTable(groupId, topic) { table =>
+    withTable(groupId, eventType) { table =>
       Future {
         Option(table.getItem(PartitionIdKey, partitionId)).map(toOffsetTracking)
       }
     }
   }
 
-  override def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking] = {
+  override def put(groupId: String, eventType: String, offset: OffsetTracking): Future[OffsetTracking] = {
 
-    withTable(groupId, topic) { table =>
+    withTable(groupId, eventType) { table =>
       Future {
         Option(table.getItem(PartitionIdKey, offset.partitionId))
-          .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, topic, offset)
+          .fold(handlePutItem _)(_ => handleUpdateItem _)(table, groupId, offset)
       }
     }
   }
 
-  private def handleUpdateItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): OffsetTracking = {
+  private def handleUpdateItem(table: Table, groupId: String, offsetTracking: OffsetTracking): OffsetTracking = {
     val valueMap = new ValueMap()
       .withString(":cidval", offsetTracking.checkpointId)
       .withString(":lhval", offsetTracking.leaseHolder)
@@ -101,7 +100,7 @@ class DynamoDBLeaseManager(system: ActorSystem, leaseProperties: LeaseProperties
     toOffsetTracking(table.getItem(PartitionIdKey, offsetTracking.partitionId))
   }
 
-  private def handlePutItem(table: Table, groupId: String, topic: String, offsetTracking: OffsetTracking): OffsetTracking = {
+  private def handlePutItem(table: Table, groupId: String, offsetTracking: OffsetTracking): OffsetTracking = {
 
     val item = new Item()
       .withPrimaryKey(PartitionIdKey, offsetTracking.partitionId)
@@ -114,9 +113,9 @@ class DynamoDBLeaseManager(system: ActorSystem, leaseProperties: LeaseProperties
     toOffsetTracking(item)
   }
 
-  private def withTable[T](groupId: String, topic: String)(func: Table => Future[T]): Future[T] = {
+  private def withTable[T](groupId: String, eventType: String)(func: Table => Future[T]): Future[T] = {
 
-    val table = tableName(groupId, topic)
+    val table = tableName(groupId, eventType)
     Future {
       val tableObj = ddbClient.createTable(new CreateTableRequest()
         .withTableName(table)

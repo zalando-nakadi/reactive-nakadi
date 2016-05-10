@@ -30,7 +30,7 @@ object TestApp extends App {
   val publisher = nakadi.consume(ConsumerProperties(
     serverProperties = server,
     tokenProvider = Option(() => tokenVal),
-    topic = "buffalo-test-topic",
+    eventType = "buffalo-test-topic",
     groupId = "some-group",
     partition = "6",
     commitHandler = DynamoDBLeaseManager(system, LeaseProperties.apply),

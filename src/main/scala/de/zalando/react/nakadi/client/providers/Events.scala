@@ -63,7 +63,7 @@ class ConsumeEvents(properties: ConsumerProperties,
   import actorContext.dispatcher
 
   override val uri = {
-    val uri = s"${properties.serverProperties}${URI_STREAM_EVENTS.format(properties.topic)}"
+    val uri = s"${properties.serverProperties}${URI_STREAM_EVENTS.format(properties.eventType)}"
     log.debug(s"Making GET request to: $uri")
     uri
   }
@@ -145,14 +145,14 @@ class ConsumeEvents(properties: ConsumerProperties,
   def toHeader(cursor: Cursor) = {
     import de.zalando.react.nakadi.client.models.JsonOps._
 
-    log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for topic '${properties.topic}'")
+    log.info(s"Using offset ${cursor.offset} on partition ${cursor.partition} for eventType '${properties.eventType}'")
     RawHeader("X-Nakadi-Cursors", Json.toJson(Seq(cursor)).toString)
   }
 
   def readFromCommitHandler: Future[Option[Cursor]] = {
     properties
       .commitHandler
-      .get(properties.groupId, properties.topic, properties.partition).map(_.map { offsetTracking =>
+      .get(properties.groupId, properties.eventType, properties.partition).map(_.map { offsetTracking =>
         Cursor(partition = offsetTracking.partitionId, offset = offsetTracking.checkpointId)
       }).recover {
         case ex =>
@@ -179,7 +179,7 @@ class ProduceEvents(properties: ProducerProperties,
   import actorContext.dispatcher
 
   override val uri = {
-    val uri = s"${properties.serverProperties}${URI_POST_EVENTS.format(properties.topic)}"
+    val uri = s"${properties.serverProperties}${URI_POST_EVENTS.format(properties.eventType)}"
     log.debug(s"Making POST request to: $uri")
     uri
   }

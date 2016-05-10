@@ -31,7 +31,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
 
   private var isRunning: Boolean = false
 
-  private val topic: String = consumerAndProps.properties.topic
+  private val eventType: String = consumerAndProps.properties.eventType
   private val groupId: String = consumerAndProps.properties.groupId
   private val partition: String = consumerAndProps.properties.partition
   private val client: ActorRef = consumerAndProps.nakadiClient
@@ -80,7 +80,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
     }
   }
 
-  private def executeCommit(offsetMap: OffsetMap) = leaseManager ! Flush(groupId, topic, partition, offsetMap)
+  private def executeCommit(offsetMap: OffsetMap) = leaseManager ! Flush(groupId, eventType, partition, offsetMap)
 
   @tailrec
   final def deliverBuf(): Unit = {
@@ -108,7 +108,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
     NakadiMessages.ConsumerMessage(
       cursor = NakadiMessages.Cursor(rawEvent.cursor.partition, Offset(rawEvent.cursor.offset)),
       events = rawEvent.events.getOrElse(Nil),
-      topic = topic
+      eventType = eventType
     )
   }
 

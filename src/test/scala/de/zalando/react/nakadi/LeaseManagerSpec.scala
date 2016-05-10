@@ -2,7 +2,7 @@ package de.zalando.react.nakadi
 
 import de.zalando.react.nakadi.utils.IdGenerator
 import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
-import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, TopicPartition}
+import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, EventTypePartition}
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.scalamock.scalatest.MockFactory
@@ -20,11 +20,11 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val leaseId = "random-test-lease-id"
   val partitionId = "15"
   val groupId = "some-group-id"
-  val topic = "some-topic"
+  val eventType = "some-event-type"
   val timestamp = new DateTime(DateTimeZone.UTC)
 
-  // Map of topic-partition to offset count
-  val offsetMap = OffsetMap(Map(TopicPartition(topic, partitionId).hash -> 10))
+  // Map of event-type-partition to offset count
+  val offsetMap = OffsetMap(Map(EventTypePartition(eventType, partitionId).hash -> 10))
 
   val commitHandler = mock[BaseLeaseManager]
   val idGenerator = mock[IdGenerator]
@@ -56,15 +56,15 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     setupIdGenerator
 
     (commitHandler.put(_: String, _: String, _: OffsetTracking))
-      .expects(groupId, topic, *)
+      .expects(groupId, eventType, *)
       .returning(Future.successful(offsetTracking.copy(leaseCounter = Option(1))))
 
     (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
+      .expects(groupId, eventType, partitionId)
       .returning(Future.successful(None))
 
     val leaseManager = createLeaseManager
-    leaseManager.flush(groupId, topic, partitionId, offsetMap).futureValue should === (true)
+    leaseManager.flush(groupId, eventType, partitionId, offsetMap).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
     leaseManager.leaseHolder should === (leaseHolder)
@@ -75,15 +75,15 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     setupIdGenerator
 
     (commitHandler.put(_: String, _: String, _: OffsetTracking))
-      .expects(groupId, topic, *)
+      .expects(groupId, eventType, *)
       .returning(Future.successful(offsetTracking.copy(leaseCounter = Option(2))))
 
     (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
+      .expects(groupId, eventType, partitionId)
       .returning(Future.successful(Some(offsetTracking.copy(leaseCounter = Option(1)))))
 
     val leaseManager = createLeaseManager
-    leaseManager.flush(groupId, topic, partitionId, offsetMap).futureValue should === (true)
+    leaseManager.flush(groupId, eventType, partitionId, offsetMap).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
     leaseManager.leaseHolder should === (leaseHolder)
@@ -94,11 +94,11 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     setupIdGenerator
 
     (commitHandler.get(_: String, _: String, _: String))
-      .expects(groupId, topic, partitionId)
+      .expects(groupId, eventType, partitionId)
       .returning(Future.successful(None))
 
     val leaseManager = createLeaseManager
-    leaseManager.requestLease(groupId, topic, partitionId).futureValue should === (true)
+    leaseManager.requestLease(groupId, eventType, partitionId).futureValue should === (true)
 
     leaseManager.leaseId should === (leaseId)
     leaseManager.leaseHolder should === (leaseHolder)

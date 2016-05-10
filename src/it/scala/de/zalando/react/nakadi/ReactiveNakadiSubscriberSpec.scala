@@ -40,7 +40,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     event1.data should === (event2.data)
     event1.metadata.flow_id should === (event2.metadata.flow_id)
     event1.metadata.eid should === (event2.metadata.eid)
-    event1.metadata.event_type should === (Some(topic))
+    event1.metadata.event_type should === (Some(eventType))
   }
 
   "Reactive-Nakadi Subscriber" should "consume a single messages" in {
@@ -61,7 +61,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
 
     val result = Await.result(resultFut, 30.seconds)
     validateEvent(result.events.head, event)
-    result.topic should === (topic)
+    result.eventType should === (eventType)
     result.cursor should === (Cursor(partition = "0", offset = Offset("0")))
   }
 
@@ -91,7 +91,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val result = Await.result(resultFut, 30.seconds)
     result.zip(Stream from 1).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
@@ -123,7 +123,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val result = Await.result(resultFut, 30.seconds)
     result.zip(Stream from 11).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
@@ -155,7 +155,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val result = Await.result(resultFut, 45.seconds)
     result.zip(Stream from 21).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
@@ -190,11 +190,11 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
 
     val result = Await.result(resultFut, 30.seconds)
     result.size should === (2)
-    result.head.topic should === (topic)
+    result.head.eventType should === (eventType)
     result.head.cursor should === (Cursor(partition = "0", offset = Offset("1030")))
     result.head.events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
 
-    result(1).topic should === (topic)
+    result(1).eventType should === (eventType)
     result(1).cursor should === (Cursor(partition = "0", offset = Offset("1040")))
     result(1).events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
   }
@@ -228,7 +228,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.size should === (10)
     result.zip(Stream.range(1041, 1050)).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
@@ -263,7 +263,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.size should === (10)
     result.zip(Stream.range(1051, 1060)).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
@@ -299,7 +299,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.size should === (10)
     result.zip(Stream.range(1061, 1070)).foreach {
       case (res, idx) =>
-        res.topic should === (topic)
+        res.eventType should === (eventType)
         res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }

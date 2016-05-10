@@ -9,25 +9,25 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
   def uuid() = UUID.randomUUID().toString
   def token = "random_token"
   val server = "http://some.server.zalando.net:9089/"
-  val topic = uuid()
+  val eventType = uuid()
   val serverProperties = ServerProperties(host = server, port = 8080, isConnectionSSL = false)
 
   "ProducerProperties" should "handle simple case" in {
     val props = ProducerProperties(
       serverProperties = serverProperties,
       tokenProvider = Option(() => token),
-      topic = topic
+      eventType = eventType
     )
     props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
-    props.topic should === (topic)
+    props.eventType should === (eventType)
   }
 
   it should "handle an empty token provider" in {
     val props = ProducerProperties(
       serverProperties = serverProperties,
       tokenProvider = None,
-      topic = topic
+      eventType = eventType
     )
     props.tokenProvider should === (None)
   }
@@ -36,11 +36,11 @@ class ProducerPropertiesTest extends FlatSpec with Matchers {
     val props = ProducerProperties(
       serverProperties = serverProperties,
       tokenProvider = Option(() => token),
-      topic = topic
+      eventType = eventType
     )
 
     props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
-    props.topic should === (topic)
+    props.eventType should === (eventType)
   }
 }

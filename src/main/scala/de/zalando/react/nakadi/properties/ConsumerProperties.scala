@@ -11,14 +11,14 @@ object ConsumerProperties {
 
   def apply(serverProperties: ServerProperties,
             tokenProvider: Option[() => String],
-            topic: String,
+            eventType: String,
             groupId: String,
             partition: String,
             commitHandler: BaseLeaseManager): ConsumerProperties = {
     new ConsumerProperties(
       serverProperties = serverProperties,
       tokenProvider = tokenProvider,
-      topic = topic,
+      eventType = eventType,
       groupId = groupId,
       partition = partition,
       commitHandler = commitHandler
@@ -29,7 +29,7 @@ object ConsumerProperties {
 case class ConsumerProperties(
   serverProperties: ServerProperties,
   tokenProvider: Option[() => String],
-  topic: String,
+  eventType: String,
   groupId: String,
   partition: String,
   commitHandler: BaseLeaseManager,

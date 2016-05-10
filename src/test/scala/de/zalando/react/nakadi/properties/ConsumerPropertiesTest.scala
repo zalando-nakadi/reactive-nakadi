@@ -14,7 +14,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers with MockFactory {
   def uuid() = UUID.randomUUID().toString
   def token = "random_token"
   val server = "some.server.zalando.net"
-  val topic = uuid()
+  val eventType = uuid()
   val groupId = uuid()
   val partition = uuid()
   val commitHandler = mock[BaseLeaseManager]
@@ -27,11 +27,11 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers with MockFactory {
       groupId = groupId,
       partition = partition,
       commitHandler = commitHandler,
-      topic = topic
+      eventType = eventType
     )
     props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
-    props.topic should === (topic)
+    props.eventType should === (eventType)
     props.groupId should === (groupId)
     props.partition should === (partition)
     props.commitHandler should === (commitHandler)
@@ -52,13 +52,13 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers with MockFactory {
       groupId = groupId,
       partition = partition,
       commitHandler = commitHandler,
-      topic = topic
+      eventType = eventType
     ).commitInterval(10.seconds)
       .readFromStartOfStream()
 
     props.serverProperties should === (serverProperties)
     props.tokenProvider.get.apply should === (token)
-    props.topic should === (topic)
+    props.eventType should === (eventType)
     props.groupId should === (groupId)
     props.partition should === (partition)
     props.commitHandler should === (commitHandler)

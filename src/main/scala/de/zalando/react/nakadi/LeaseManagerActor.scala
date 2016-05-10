@@ -10,9 +10,9 @@ object LeaseManagerActor {
 
   case object LeaseAvailable
   case object LeaseUnavailable
-  case class RequestLease(groupId: String, topic: String, partitionId: String)
-  case class ReleaseLease(groupId: String, topic: String, partitionId: String)
-  case class Flush(groupId: String, topic: String, partitionId: String, offsetMap: OffsetMap)
+  case class RequestLease(groupId: String, eventType: String, partitionId: String)
+  case class ReleaseLease(groupId: String, eventType: String, partitionId: String)
+  case class Flush(groupId: String, eventType: String, partitionId: String, offsetMap: OffsetMap)
 
   def props(leaseManager: LeaseManager) = {
     Props(new LeaseManagerActor(leaseManager))
@@ -31,11 +31,11 @@ class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogg
 
   private def flush(msg: Flush) = {
     val senderRef = sender
-    leaseManager.flush(msg.groupId, msg.topic, msg.partitionId, msg.offsetMap).onComplete {
+    leaseManager.flush(msg.groupId, msg.eventType, msg.partitionId, msg.offsetMap).onComplete {
       case Failure(err) => log.error(err, "Lease Management error when flushing:")
       case Success(status) if status => senderRef ! LeaseAvailable
       case Success(status) if !status => {
-        log.error(s"Lease is not usable for topic '${msg.topic}' partition '${msg.partitionId}' group '${msg.groupId}'")
+        log.error(s"Lease is not usable for event-type '${msg.eventType}' partition '${msg.partitionId}' group '${msg.groupId}'")
         senderRef ! LeaseUnavailable
       }
     }
@@ -43,11 +43,11 @@ class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogg
 
   private def requestLease(msg: RequestLease): Unit = {
     val senderRef = sender
-    leaseManager.requestLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
+    leaseManager.requestLease(msg.groupId, msg.eventType, msg.partitionId).onComplete {
       case Failure(err) => log.error(err, "Lease Management error when requesting lease:")
       case Success(status) if status => senderRef ! LeaseAvailable
       case Success(status) if !status => {
-        log.error(s"Lease is not usable for topic '${msg.topic}' partition '${msg.partitionId}' group '${msg.groupId}'")
+        log.error(s"Lease is not usable for event-type '${msg.eventType}' partition '${msg.partitionId}' group '${msg.groupId}'")
         senderRef ! LeaseUnavailable
       }
     }
@@ -55,7 +55,7 @@ class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogg
 
   private def releaseLease(msg: ReleaseLease): Unit = {
     val senderRef = sender
-    leaseManager.releaseLease(msg.groupId, msg.topic, msg.partitionId).onComplete {
+    leaseManager.releaseLease(msg.groupId, msg.eventType, msg.partitionId).onComplete {
       case Failure(err) => log.error(err, "Lease Management error when releasing lease:")
       case Success(status) => senderRef ! LeaseUnavailable
     }

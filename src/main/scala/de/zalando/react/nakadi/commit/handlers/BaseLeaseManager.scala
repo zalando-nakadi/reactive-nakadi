@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 trait BaseLeaseManager {
 
-  def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking]
+  def put(groupId: String, eventType: String, offset: OffsetTracking): Future[OffsetTracking]
 
-  def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]]
+  def get(groupId: String, eventType: String, partitionId: String): Future[Option[OffsetTracking]]
 }

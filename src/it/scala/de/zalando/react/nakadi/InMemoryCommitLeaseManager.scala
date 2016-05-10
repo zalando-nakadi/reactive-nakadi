@@ -10,7 +10,7 @@ import scala.concurrent.Future
 object InMemoryCommitLeaseManager extends BaseLeaseManager {
 
   private val store = scala.collection.concurrent.TrieMap.empty[String, String]
-  private def generateKey(group: String, topic: String, partition: String) = s"$group-$topic-$partition"
+  private def generateKey(group: String, eventType: String, partition: String) = s"$group-$eventType-$partition"
   private def generateValue(offset: String, leaseHolder: String, leaseCounter: Long) = s"$offset-$leaseHolder-$leaseCounter"
 
   def create(key: String, partitionId: String, checkpointId: String, leaseHolder: String) = {
@@ -42,15 +42,15 @@ object InMemoryCommitLeaseManager extends BaseLeaseManager {
     offset
   }
 
-  override def put(groupId: String, topic: String, offset: OffsetTracking): Future[OffsetTracking] = Future.successful {
-    val key = generateKey(groupId, topic, offset.partitionId)
+  override def put(groupId: String, eventType: String, offset: OffsetTracking): Future[OffsetTracking] = Future.successful {
+    val key = generateKey(groupId, eventType, offset.partitionId)
     store.get(key)
       .fold(create(key, offset.partitionId, offset.checkpointId, offset.leaseHolder))(update(key, _, offset.partitionId))
   }
 
-  override def get(groupId: String, topic: String, partitionId: String): Future[Option[OffsetTracking]] = {
+  override def get(groupId: String, eventType: String, partitionId: String): Future[Option[OffsetTracking]] = {
     Future.successful {
-      val key = generateKey(groupId, topic, partitionId)
+      val key = generateKey(groupId, eventType, partitionId)
       store.get(key).map { value =>
         OffsetTracking(
           partitionId = partitionId,

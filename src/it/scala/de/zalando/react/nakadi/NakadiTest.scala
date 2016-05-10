@@ -33,7 +33,7 @@ trait NakadiTest extends FlatSpec
   def defaultWatermarkStrategy = () => WatermarkRequestStrategy(10)
   def dockerProvider: DockerProvider
 
-  val topic = "nakadi-test-topic"
+  val eventType = "nakadi-test-event-type"
   val group = "nakadi-test-group"
 
   val nakadi = new ReactiveNakadi()
@@ -58,7 +58,7 @@ trait NakadiTest extends FlatSpec
     ProducerProperties(
       serverProperties = serverProperties,
       tokenProvider = None,
-      topic = topic
+      eventType = eventType
     )
   }
 
@@ -66,7 +66,7 @@ trait NakadiTest extends FlatSpec
     ConsumerProperties(
       serverProperties = serverProperties,
       tokenProvider = None,
-      topic = topic,
+      eventType = eventType,
       groupId = group,
       partition = "0", // TODO - remove this, should be auto assigned
       commitHandler = InMemoryCommitLeaseManager
@@ -107,7 +107,7 @@ trait NakadiTest extends FlatSpec
       """.stripMargin
 
     val message = EventTypeMessage(EventType(
-      name = topic,
+      name = eventType,
       statistics = None,
       partitionKeyFields = Nil,
       dataKeyFields = None,

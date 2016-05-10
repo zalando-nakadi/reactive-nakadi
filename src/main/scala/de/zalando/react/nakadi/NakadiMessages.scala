@@ -27,7 +27,7 @@ object NakadiMessages {
   )
 
   case class ConsumerMessage(
-    topic: String,
+    eventType: String,
     events: Seq[Event],
     cursor: Cursor
   )

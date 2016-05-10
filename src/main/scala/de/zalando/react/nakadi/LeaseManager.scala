@@ -3,7 +3,7 @@ package de.zalando.react.nakadi
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import de.zalando.react.nakadi.utils.IdGenerator
-import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, TopicPartition}
+import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, EventTypePartition}
 import de.zalando.react.nakadi.commit.handlers.{BaseLeaseManager => BaseCommitHandler}
 import de.zalando.react.nakadi.properties.ConsumerProperties
 import org.joda.time.{DateTime, DateTimeZone}
@@ -21,11 +21,11 @@ trait LeaseManager {
 
   def counter: mutable.Map[String, Long]
 
-  def flush(groupId: String, topic: String, partitionId: String, offsetMap: OffsetMap)(implicit executionContext: ExecutionContext): Future[Boolean]
+  def flush(groupId: String, eventType: String, partitionId: String, offsetMap: OffsetMap)(implicit executionContext: ExecutionContext): Future[Boolean]
 
-  def requestLease(groupId: String, topic: String, partitionId: String)(implicit executionContext: ExecutionContext): Future[Boolean]
+  def requestLease(groupId: String, eventType: String, partitionId: String)(implicit executionContext: ExecutionContext): Future[Boolean]
 
-  def releaseLease(groupId: String, topic: String, partitionId: String)(implicit executionContext: ExecutionContext): Future[Unit]
+  def releaseLease(groupId: String, eventType: String, partitionId: String)(implicit executionContext: ExecutionContext): Future[Unit]
 
 }
 
@@ -46,22 +46,22 @@ class LeaseManagerImpl(override val leaseHolder: String,
   private def maybeWarn(msg: String) = log.foreach(_.warning(msg))
   private def maybeDebug(msg: String) = log.foreach(_.debug(msg))
 
-  private def logInfo(operation: String, topic: String, groupId: String, partitionId: String) = {
+  private def logInfo(operation: String, eventType: String, groupId: String, partitionId: String) = {
     maybeDebug(s"""
       |   $operation lease holder: '$leaseHolder' (using ID $leaseId)
       |   Info:
-      |     Topic = '$topic'
+      |     EventType = '$eventType'
       |     Group = '$groupId'
       |     Partition = '$partitionId'
       """.stripMargin)
   }
 
   private def execCommit(groupId: String,
-                         topic: String,
+                         eventType: String,
                          offsetTracking: OffsetTracking)
                         (implicit executionContext: ExecutionContext): Future[Unit] = {
 
-    commitHandler.put(groupId, topic, offsetTracking).map {
+    commitHandler.put(groupId, eventType, offsetTracking).map {
       offset => counter(offset.partitionId) = offset.leaseCounter.getOrElse(0)
     }
   }
@@ -71,41 +71,41 @@ class LeaseManagerImpl(override val leaseHolder: String,
     currentOffset.leaseCounter.contains(count) || currentOffset.leaseTimestamp.isBeforeNow
   }
 
-  override def requestLease(groupId: String, topic: String, partitionId: String)
+  override def requestLease(groupId: String, eventType: String, partitionId: String)
                            (implicit executionContext: ExecutionContext): Future[Boolean] = {
-    logInfo("Requesting lease for", topic, groupId, partitionId)
-    commitHandler.get(groupId, topic, partitionId).map(_.fold(true)(validate))
+    logInfo("Requesting lease for", eventType, groupId, partitionId)
+    commitHandler.get(groupId, eventType, partitionId).map(_.fold(true)(validate))
   }
 
-  override def releaseLease(groupId: String, topic: String, partitionId: String)
+  override def releaseLease(groupId: String, eventType: String, partitionId: String)
                            (implicit executionContext: ExecutionContext): Future[Unit] = {
-    logInfo("Releasing lease for", topic, groupId, partitionId)
-    commitHandler.get(groupId, topic, partitionId).map {
-      _.fold(maybeWarn(s"No lease exists to release for group: '$groupId' topic: '$topic' partition: '$partitionId'")) { currentOffset =>
-        commitHandler.put(groupId, topic, currentOffset.copy(leaseTimestamp = now, leaseCounter = Option(0)))
+    logInfo("Releasing lease for", eventType, groupId, partitionId)
+    commitHandler.get(groupId, eventType, partitionId).map {
+      _.fold(maybeWarn(s"No lease exists to release for group: '$groupId' eventType: '$eventType' partition: '$partitionId'")) { currentOffset =>
+        commitHandler.put(groupId, eventType, currentOffset.copy(leaseTimestamp = now, leaseCounter = Option(0)))
       }
     }
   }
 
-  override def flush(groupId: String, topic: String, partitionId: String, offsetMap: OffsetMap)
+  override def flush(groupId: String, eventType: String, partitionId: String, offsetMap: OffsetMap)
                     (implicit executionContext: ExecutionContext): Future[Boolean] = {
-    logInfo("Executing flush for", topic, groupId, partitionId)
+    logInfo("Executing flush for", eventType, groupId, partitionId)
     val offsetTracking = OffsetTracking(
       partitionId = partitionId,
-      checkpointId = offsetMap.lastOffsetAsString(TopicPartition(topic, partitionId)),
+      checkpointId = offsetMap.lastOffsetAsString(EventTypePartition(eventType, partitionId)),
       leaseHolder = leaseHolder,
       leaseTimestamp = newLeaseTimeout,
       leaseId = Option(leaseId)
     )
 
-    def create = execCommit(groupId, topic, offsetTracking).map(_ => true)
+    def create = execCommit(groupId, eventType, offsetTracking).map(_ => true)
 
     def update(currentOffset: OffsetTracking) = {
-      if (validate(currentOffset)) execCommit(groupId, topic, offsetTracking).map(_ => true)
+      if (validate(currentOffset)) execCommit(groupId, eventType, offsetTracking).map(_ => true)
       else Future.successful(false)
     }
 
-    commitHandler.get(groupId, topic, partitionId).flatMap(_.fold(create)(update))
+    commitHandler.get(groupId, eventType, partitionId).flatMap(_.fold(create)(update))
   }
 }
 
