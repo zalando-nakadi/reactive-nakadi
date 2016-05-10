@@ -7,7 +7,7 @@ import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.document.{Item, Table}
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec
-import de.zalando.react.nakadi.properties.LeaseProperties
+import de.zalando.react.nakadi.properties.CommitProperties
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
@@ -15,18 +15,18 @@ import scala.collection.JavaConverters._
 
 object DynamoDBCommitManager {
   def apply(system: ActorSystem,
-            leaseProperties: LeaseProperties,
+            leaseProperties: CommitProperties,
             provider: Provider): DynamoDBCommitManager = {
     new DynamoDBCommitManager(system, leaseProperties, provider)
   }
 
   def apply(system: ActorSystem,
-            leaseProperties: LeaseProperties): DynamoDBCommitManager = {
+            leaseProperties: CommitProperties): DynamoDBCommitManager = {
     new DynamoDBCommitManager(system, leaseProperties, new ClientProvider(leaseProperties))
   }
 }
 
-class DynamoDBCommitManager(system: ActorSystem, leaseProperties: LeaseProperties, provider: Provider) extends BaseCommitManager {
+class DynamoDBCommitManager(system: ActorSystem, leaseProperties: CommitProperties, provider: Provider) extends BaseCommitManager {
 
   import system.dispatcher
 

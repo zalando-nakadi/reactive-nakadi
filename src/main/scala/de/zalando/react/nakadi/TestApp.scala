@@ -10,13 +10,13 @@ import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
 import de.zalando.react.nakadi.NakadiMessages._
 import org.joda.time.DateTime
 import com.typesafe.config.ConfigFactory
-import de.zalando.react.nakadi.properties.{ConsumerProperties, LeaseProperties, ServerProperties}
+import de.zalando.react.nakadi.properties._
 import play.api.libs.json.Json
 
 
 object TestApp extends App {
 
-  val tokenVal = "050e4925-fcb4-4e7d-8b1e-b6eee80c1b3c"
+  val tokenVal = ""
 
   val config = ConfigFactory.load()
 
@@ -24,26 +24,21 @@ object TestApp extends App {
   implicit val materializer = ActorMaterializer()
 
   val nakadi = new ReactiveNakadi()
-  val server = ServerProperties(
-    "nakadi-sandbox.aruha-test.zalan.do", port = 443, isConnectionSSL = true)
+  val server = ServerProperties("192.168.99.100", port = 8080, isConnectionSSL = false)
 
-  val publisher = nakadi.consume(ConsumerProperties(
+  val publisher = nakadi.consumeWithOffsetSink(ConsumerProperties(
     serverProperties = server,
-    tokenProvider = Option(() => tokenVal),
-    eventType = "buffalo-test-topic",
-    groupId = "some-group",
-    partition = "6",
-    commitHandler = DynamoDBCommitManager(system, LeaseProperties.apply),
-    offset = Some(BeginOffset)
+    tokenProvider = None,
+    eventType = "reactive-nakadi-testing",
+    groupId = "oxygen-buffalo",
+    partition = "0",
+    commitHandler = DynamoDBCommitManager(system, CommitProperties.apply)
+    //offset = Some(BeginOffset)
   ))
 
   Source
-    .fromPublisher(publisher)
-//    .map { msg =>
-//      Thread.sleep(1000)
-//      msg
-//    }
-    .map(println)
-    .to(Sink.ignore)
+    .fromPublisher(publisher.publisher)
+    .map { msg => println(msg); msg }
+    .to(publisher.offsetCommitSink)
     .run()
 }

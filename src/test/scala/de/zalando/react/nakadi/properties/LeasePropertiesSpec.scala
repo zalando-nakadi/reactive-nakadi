@@ -10,7 +10,7 @@ class LeasePropertiesSpec extends FlatSpec with Matchers with MockFactory {
 
   "LeaseProperties" should "handle default case" in {
 
-    val leaseProperties = LeaseProperties.apply
+    val leaseProperties = CommitProperties.apply
     leaseProperties.staleLeaseDelta should === (10.minutes)
     leaseProperties.awsCommitRegion should === ("eu-west-1")
     leaseProperties.awsDynamoDbReadCapacityUnits should === (5L)

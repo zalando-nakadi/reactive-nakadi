@@ -29,6 +29,12 @@ trait LeaseManager {
 
 }
 
+/**
+  * Note to anyone looking at this - beware of dragons.
+  * This class is not fully complete. It is the intention to
+  * implement full lease management. Currently only
+  * commiting offsets for a given partition is supported.
+  */
 class LeaseManagerImpl(override val leaseHolder: String,
                        commitHandler: BaseCommitHandler,
                        staleLeaseDelta: FiniteDuration,
@@ -98,14 +104,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
       leaseId = Option(leaseId)
     )
 
-    def create = execCommit(groupId, eventType, offsetTracking).map(_ => true)
-
-    def update(currentOffset: OffsetTracking) = {
-      if (validate(currentOffset)) execCommit(groupId, eventType, offsetTracking).map(_ => true)
-      else Future.successful(false)
-    }
-
-    commitHandler.get(groupId, eventType, partitionId).flatMap(_.fold(create)(update))
+    execCommit(groupId, eventType, offsetTracking).map(_ => true)
   }
 }
 
