@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import de.zalando.react.nakadi.utils.IdGenerator
 import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, EventTypePartition}
-import de.zalando.react.nakadi.commit.handlers.{BaseLeaseManager => BaseCommitHandler}
+import de.zalando.react.nakadi.commit.handlers.{BaseCommitManager => BaseCommitHandler}
 import de.zalando.react.nakadi.properties.ConsumerProperties
 import org.joda.time.{DateTime, DateTimeZone}
 

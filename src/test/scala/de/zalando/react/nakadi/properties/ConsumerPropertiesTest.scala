@@ -2,7 +2,7 @@ package de.zalando.react.nakadi.properties
 
 import java.util.UUID
 
-import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
+import de.zalando.react.nakadi.commit.handlers.BaseCommitManager
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -17,7 +17,7 @@ class ConsumerPropertiesTest extends FlatSpec with Matchers with MockFactory {
   val eventType = uuid()
   val groupId = uuid()
   val partition = uuid()
-  val commitHandler = mock[BaseLeaseManager]
+  val commitHandler = mock[BaseCommitManager]
   val serverProperties = ServerProperties(host = server, port = 8080, isConnectionSSL = false)
 
   "ConsumerProperties" should "handle simple case" in {

@@ -14,7 +14,7 @@ import de.zalando.react.nakadi.NakadiMessages.EventTypeMessage
 import de.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties, ServerProperties}
 
 import scala.concurrent.duration._
-import scala.de.zalando.react.nakadi.InMemoryCommitLeaseManager
+import scala.de.zalando.react.nakadi.InMemoryCommitCommitManager$
 
 
 trait NakadiTest extends FlatSpec
@@ -69,7 +69,7 @@ trait NakadiTest extends FlatSpec
       eventType = eventType,
       groupId = group,
       partition = "0", // TODO - remove this, should be auto assigned
-      commitHandler = InMemoryCommitLeaseManager
+      commitHandler = InMemoryCommitCommitManager$
     ).commitInterval(2.seconds).readFromStartOfStream()
   }
 

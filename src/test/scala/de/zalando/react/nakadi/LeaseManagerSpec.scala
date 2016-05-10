@@ -1,7 +1,7 @@
 package de.zalando.react.nakadi
 
 import de.zalando.react.nakadi.utils.IdGenerator
-import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
+import de.zalando.react.nakadi.commit.handlers.BaseCommitManager
 import de.zalando.react.nakadi.commit.{OffsetMap, OffsetTracking, EventTypePartition}
 
 import org.scalatest.{FlatSpec, Matchers}
@@ -26,7 +26,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   // Map of event-type-partition to offset count
   val offsetMap = OffsetMap(Map(EventTypePartition(eventType, partitionId).hash -> 10))
 
-  val commitHandler = mock[BaseLeaseManager]
+  val commitHandler = mock[BaseCommitManager]
   val idGenerator = mock[IdGenerator]
   val offsetTracking = {
     OffsetTracking(

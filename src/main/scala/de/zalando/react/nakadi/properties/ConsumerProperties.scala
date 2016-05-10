@@ -1,7 +1,7 @@
 package de.zalando.react.nakadi.properties
 
 import de.zalando.react.nakadi.NakadiMessages._
-import de.zalando.react.nakadi.commit.handlers.BaseLeaseManager
+import de.zalando.react.nakadi.commit.handlers.BaseCommitManager
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -14,7 +14,7 @@ object ConsumerProperties {
             eventType: String,
             groupId: String,
             partition: String,
-            commitHandler: BaseLeaseManager): ConsumerProperties = {
+            commitHandler: BaseCommitManager): ConsumerProperties = {
     new ConsumerProperties(
       serverProperties = serverProperties,
       tokenProvider = tokenProvider,
@@ -32,7 +32,7 @@ case class ConsumerProperties(
   eventType: String,
   groupId: String,
   partition: String,
-  commitHandler: BaseLeaseManager,
+  commitHandler: BaseCommitManager,
   offset: Option[Offset] = None,
   commitInterval: FiniteDuration = 30.seconds,
   batchLimit: Int = 0,

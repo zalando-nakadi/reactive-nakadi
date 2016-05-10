@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.ActorMaterializer
 import org.reactivestreams.{Publisher, Subscriber}
-import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBLeaseManager
+import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
 import de.zalando.react.nakadi.NakadiMessages._
 import org.joda.time.DateTime
 import com.typesafe.config.ConfigFactory
@@ -33,7 +33,7 @@ object TestApp extends App {
     eventType = "buffalo-test-topic",
     groupId = "some-group",
     partition = "6",
-    commitHandler = DynamoDBLeaseManager(system, LeaseProperties.apply),
+    commitHandler = DynamoDBCommitManager(system, LeaseProperties.apply),
     offset = Some(BeginOffset)
   ))
 
