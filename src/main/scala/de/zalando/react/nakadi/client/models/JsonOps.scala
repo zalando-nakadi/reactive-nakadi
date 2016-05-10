@@ -21,36 +21,36 @@ object JsonOps {
     }
   }
 
-  implicit val readsMetaData: Reads[MetaData] = (
+  implicit val readsMetaData: Reads[EventMetadata] = (
     (__ \ "eid").read[String] and
     (__ \ "event_type").readNullable[String] and
     (__ \ "occurred_at").read[DateTime] and
     (__ \ "received_at").readNullable[DateTime] and
     (__ \ "parent_eids").readNullable[Seq[String]] and
     (__ \ "flow_id").readNullable[String]
-  )(MetaData)
+  )(EventMetadata)
 
-  implicit val writesMetaData: Writes[MetaData] = (
+  implicit val writesMetaData: Writes[EventMetadata] = (
     (__ \ "eid").write[String] and
     (__ \ "event_type").writeNullable[String] and
     (__ \ "occurred_at").write[String].contramap[DateTime](ISODateTimeFormat.dateTime().print) and
     (__ \ "received_at").writeNullable[String].contramap[Option[DateTime]](_.map(ISODateTimeFormat.dateTime().print)) and
     (__ \ "parent_eids").writeNullable[Seq[String]] and
     (__ \ "flow_id").writeNullable[String]
-  )(unlift(MetaData.unapply))
+  )(unlift(EventMetadata.unapply))
 
   implicit val readsEvent: Reads[Event] = (
     (__ \ "data_type").read[String] and
     (__ \ "data_op").read[String].map(DataOpEnum.apply) and
     (__ \ "data").read[EventPayload] and
-    (__ \ "metadata").read[MetaData]
+    (__ \ "metadata").read[EventMetadata]
   )(Event)
 
   implicit val writesEvent: Writes[Event] = (
     (__ \ "data_type").write[String] and
     (__ \ "data_op").write[String].contramap(DataOpEnum.contrapply) and
     (__ \ "data").write[EventPayload] and
-    (__ \ "metadata").write[MetaData]
+    (__ \ "metadata").write[EventMetadata]
   )(unlift(Event.unapply))
 
   implicit val readsCursor: Reads[Cursor] = (

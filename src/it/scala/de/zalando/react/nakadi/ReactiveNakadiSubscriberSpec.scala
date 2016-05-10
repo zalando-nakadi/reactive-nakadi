@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSource
 import de.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, Cursor, Offset, ProducerMessage}
-import de.zalando.react.nakadi.client.models.{DataOpEnum, Event, EventPayload, MetaData}
+import de.zalando.react.nakadi.client.models.{DataOpEnum, Event, EventPayload, EventMetadata}
 import de.zalando.react.nakadi.commit.OffsetTracking
 import org.joda.time.DateTime
 import play.api.libs.json.Json
@@ -26,7 +26,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
       data_type = "test_data_type",
       data_op = DataOpEnum.C,
       data = Json.parse(s"""{"foo": "bar"}""").as[EventPayload],
-      MetaData(
+      EventMetadata(
         eid = UUID.randomUUID().toString,
         occurred_at = new DateTime(),
         flow_id = Option("my-test-flow-id")

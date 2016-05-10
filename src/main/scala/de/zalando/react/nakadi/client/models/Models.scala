@@ -3,7 +3,7 @@ package de.zalando.react.nakadi.client.models
 import org.joda.time.DateTime
 
 
-case class MetaData(
+case class EventMetadata(
   eid: String,
   event_type: Option[String] = None,
   occurred_at: DateTime,
@@ -16,7 +16,7 @@ case class Event(
   data_type: String,
   data_op: DataOpEnum.DataOp,
   data: EventPayload, // Raw payload for event
-  metadata: MetaData
+  metadata: EventMetadata
 )
 
 case class Cursor(
