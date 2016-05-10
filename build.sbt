@@ -35,8 +35,13 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
-// commons-logging in akka-slf4j and aws-java-sdk-dynamodb is conflicting with slf4j-api
-libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
+libraryDependencies ~= { _.map {
+  case m if m.organization == "com.typesafe.play" =>
+    m.exclude("commons-logging", "commons-logging")
+  case m if m.organization == "com.typesafe.akka" =>
+    m.exclude("commons-logging", "commons-logging")
+  case m => m
+}}
 
 // causes merge problem when building fat JAR, but is not needed
 assemblyMergeStrategy in assembly := {
