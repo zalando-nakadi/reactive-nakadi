@@ -62,7 +62,6 @@ class LeaseManagerActor(leaseManager: LeaseManager) extends Actor with ActorLogg
   }
 
   private def sendLeaseUnavailable(senderRef: ActorRef) = {
-    sys.error("Lease is not usable right now")
     senderRef ! LeaseUnavailable
   }
 }

@@ -16,7 +16,7 @@ class ClientProvider(override val leaseProperties: CommitProperties) extends Pro
 
   override val client: DynamoDB = {
     val c = new AmazonDynamoDBClient(new ProfileCredentialsProvider())
-    c.withRegion(Regions.fromName(leaseProperties.awsCommitRegion))
+      c.configureRegion(Regions.fromName(leaseProperties.awsCommitRegion))
     new DynamoDB(c)
   }
 }

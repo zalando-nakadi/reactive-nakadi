@@ -1,26 +1,32 @@
 name := """reactive-nakadi-core"""
-organization := "org.zalando.reactivenakadi"
-
-version := "0.1.0-SNAPSHOT"
-scalaVersion := "2.11.7"
 
 val akkaVersion = "2.4.2"
 
-parallelExecution in ThisBuild := false
-
 resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 
-val customItSettings = Defaults.itSettings ++ Seq(
-  scalaSource := baseDirectory.value / "src" / "it",
-  resourceDirectory := baseDirectory.value / "src" / "it" / "resources",
-  fork in test := true,
-  parallelExecution := false
+val commonSettings = sonatypeSettings ++ Seq(
+  organization := "org.zalando.reactivenakadi",
+  version := "0.0.1-SNAPSHOT",
+  startYear := Some(2016),
+  scalaVersion := "2.11.7",
+  test in assembly := {},
+  licenses := Seq("Apache License 2.0" -> url("https://opensource.org/licenses/MIT")),
+  homepage := Some(url("https://github.com/zalando/reactive-nakadi")),
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-encoding",
+    "UTF-8",
+    "-feature",
+    "-unchecked",
+    "-Xfatal-warnings",
+    "-Xlint",
+    "-Yno-adapted-args",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    //"-Ywarn-value-discard",
+    "-Xfuture"
+  )
 )
-
-lazy val root = (project in file("."))
-  .configs(IntegrationTest)
-  .settings(inConfig(IntegrationTest)(customItSettings): _*)
-
 
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
@@ -51,4 +57,28 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-mainClass in assembly := Some("de.zalando.react.nakadi.TestApp")
+parallelExecution in ThisBuild := false
+
+val customItSettings = Defaults.itSettings ++ Seq(
+  scalaSource := baseDirectory.value / "src" / "it",
+  resourceDirectory := baseDirectory.value / "src" / "it" / "resources",
+  fork in test := true,
+  parallelExecution := false
+)
+
+val publishSettings = Seq(
+  publishMavenStyle := true,
+  publishTo := {
+    val nexus = "https://oss.sonatype.org/"
+    if (isSnapshot.value)
+      Some("snapshots" at nexus + "content/repositories/snapshots")
+    else
+      Some("releases" at nexus + "service/local/staging/deploy/maven2")
+  }
+)
+
+lazy val root = (project in file("."))
+  .configs(IntegrationTest)
+  .settings(commonSettings)
+  .settings(inConfig(IntegrationTest)(customItSettings): _*)
+  .settings(publishSettings)

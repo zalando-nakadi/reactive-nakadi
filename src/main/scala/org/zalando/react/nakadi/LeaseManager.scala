@@ -74,7 +74,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
   }
 
   def validate(currentOffset: OffsetTracking): Boolean = {
-    val count = counter.getOrElse(currentOffset.partitionId, 0)
+    val count = counter.getOrElse(currentOffset.partitionId, 0L)
     currentOffset.leaseCounter.contains(count) || currentOffset.leaseTimestamp.isBeforeNow
   }
 

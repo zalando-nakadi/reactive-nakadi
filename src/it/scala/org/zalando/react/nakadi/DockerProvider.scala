@@ -1,8 +1,8 @@
 package org.zalando.react.nakadi
 
-import com.typesafe.config.Config
-
 import sys.process._
+
+import scala.language.postfixOps
 
 
 trait DockerProvider {
