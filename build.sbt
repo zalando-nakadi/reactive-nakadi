@@ -6,7 +6,7 @@ resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 
 val commonSettings = sonatypeSettings ++ Seq(
   organization := "org.zalando.reactivenakadi",
-  version := "0.0.1-SNAPSHOT",
+  //version := "0.0.1-SNAPSHOT",
   startYear := Some(2016),
   scalaVersion := "2.11.7",
   test in assembly := {},
@@ -77,8 +77,26 @@ val publishSettings = Seq(
   }
 )
 
+// Setup Git Versioning
+lazy val gitVersioningSettings = Seq(
+  showCurrentGitBranch,
+  git.baseVersion := "v0.0.01",
+  git.useGitDescribe := true,
+  git.gitTagToVersionNumber := { version: String =>
+    val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r
+    version match {
+      case VersionRegex(v,"SNAPSHOT") => Some(s"$v-SNAPSHOT")
+      case VersionRegex(v,"") => Some(v)
+      case VersionRegex(v,s) => Some(s"$v-$s-SNAPSHOT")
+      case _ => None
+    }
+  }
+)
+
 lazy val root = (project in file("."))
+  .enablePlugins(GitVersioning)
   .configs(IntegrationTest)
+  .settings(gitVersioningSettings: _*)
   .settings(commonSettings)
   .settings(inConfig(IntegrationTest)(customItSettings): _*)
   .settings(publishSettings)
