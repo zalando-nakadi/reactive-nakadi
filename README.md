@@ -12,7 +12,11 @@ An important point to note is that it is a library that can only be used in an A
 
 ###Installation
 
-*Coming soon...*
+Available at Nexus Repository for Scala 2.11:
+
+```scala
+libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.02"
+```
 
 ###Usage
 
@@ -31,9 +35,9 @@ implicit val materializer = ActorMaterializer()
 This example is the simplest use case, a consumer that consumes events from Nakadi:
 ```scala
 import org.zalando.react.nakadi.properties._
-import de.zalando.react.nakadi.ReactiveNakadi
+import org.zalando.react.nakadi.ReactiveNakadi
 import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
-import de.zalando.react.nakadi.NakadiMessages.{
+import org.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
 
@@ -62,7 +66,7 @@ From the above example you will note a couple of things. First is the optional `
 
 Second thing you will notice is the `commitHandler`. This is required, so it is important your application is authenticated with AWS. You can authenticate using the AWS environment variables, or `~/.aws/credentials`. Take a look at the AWS documentation for more examples.
 
-The third parameter `offset` is optional, but if left empty it will try to read the latest commit from the commit handler.  If there are no commits available, it will read from the `BEGIN` offset value in Nakadi. Alternatively you can set it to `Option(Offset("120"))` or `Option(BeginOffset)`. Both of which can be imported from `import de.zalando.react.nakadi.NakadiMessages.{ BeginOffset, Offset }`
+The third parameter `offset` is optional, but if left empty it will try to read the latest commit from the commit handler.  If there are no commits available, it will read from the `BEGIN` offset value in Nakadi. Alternatively you can set it to `Option(Offset("120"))` or `Option(BeginOffset)`. Both of which can be imported from `import org.zalando.react.nakadi.NakadiMessages.{ BeginOffset, Offset }`
 
 Finally the `partition` value *unfortunately* needs to be hard coded. This is later to be removed when Lease Management feature is complete. This means that you will need to create multiple instances of a publisher for each partition, until the lease management feature is complete.
 
@@ -72,9 +76,9 @@ This example will build on the previous, say we want to consume messages, and th
 
 ```scala
 import org.zalando.react.nakadi.properties._
-import de.zalando.react.nakadi.ReactiveNakadi
+import org.zalando.react.nakadi.ReactiveNakadi
 import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
-import de.zalando.react.nakadi.NakadiMessages.{
+import org.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
 
@@ -112,9 +116,9 @@ So say we are consuming messages, but we want to keep track of where we are on t
 
 ```scala
 import org.zalando.react.nakadi.properties._
-import de.zalando.react.nakadi.ReactiveNakadi
+import org.zalando.react.nakadi.ReactiveNakadi
 import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
-import de.zalando.react.nakadi.NakadiMessages.{
+import org.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
 

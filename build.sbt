@@ -6,7 +6,6 @@ resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 
 val commonSettings = sonatypeSettings ++ Seq(
   organization := "org.zalando.reactivenakadi",
-  //version := "0.0.1-SNAPSHOT",
   startYear := Some(2016),
   scalaVersion := "2.11.7",
   test in assembly := {},
@@ -65,6 +64,12 @@ val customItSettings = Defaults.itSettings ++ Seq(
   fork in test := true,
   parallelExecution := false
 )
+
+// Setup Publishing settings
+credentials ++= (for {
+  username <- Option(System.getenv().get("SONATYPE_USERNAME"))
+  password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
+} yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)).toSeq
 
 val publishSettings = Seq(
   publishMavenStyle := true,

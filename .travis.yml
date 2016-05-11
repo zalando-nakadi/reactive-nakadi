@@ -8,16 +8,22 @@ before_script:
   - oraclejdk8
 
 scala:
-   - 2.11.7
+  - 2.11.7
 
 script:
   - sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test coverageReport coverageAggregate
 
 after_success:
   - sbt coveralls
+  - "[[ $TRAVIS_BRANCH == \"master\" ]] && { sbt publish; };"
 
 services:
   - docker
 
 env:
-  - DOCKER_IP=127.0.0.1
+  matrix:
+    - DOCKER_IP=127.0.0.1
+
+  global:
+  - secure: pucnGYKmiGHmjIx7yf3HUhsvzjAJwE2vhvFcOvPYwy8PoIG51nvDSpgv5criK5RCaE2/t06hZjvjvRQ04FA/vrgex+NxBJNgEZ33Lmjdx2ncYCnvVDmWY43cJva3fMznFny0wifPvs9e73Yp75tTiZctCY0iiMDhyd9tCHOhRYs2Dwr1Sg5QBF616rgZRiY9iYWyo0TR1IEB8diBvTX5WFWJQtMcAF2U3BhP8SS44ds7W5Abz/vWcQJI27lnqUQstfEGkZiWMTLEGakmhG4NApBEwPT8tFIEJnF8UmHF/pO1hNM22Ge7kaVAN/X2Q/wvXdmsB5bAMVFWpgI52ZfMNQwcQc0gXHA7+aQ+Hz5Fe0tbyWOxldx3Vr8ZZLUl1Ag0yFfaY/BKIcrDKgrpSmYeCaN5QyFDgv4itUTNL03qtYg3PZDS8lljI2+WOZQ86EpN+tFz2DObBB7bNMVMxSibM1+Tdy46Rft8h17KX/jla9StAYY78DlwRlAQbVBM+eGybNtQSp7QYAyOpSPdcGyQUOweBP+Ht57wPE2VNuJToYn00t+2XCyMLU9Bx5UTJx+FwhaLfkMW+3S8cMRgbNXWzz9SA/rSNsbc5AwfO2OrLnFqSgo1OAK3K/GBXIiFnlBgrMAvk6PH05aHf0HExBXIR+X1x2mT63zN9M1gL7vt9h4=
+  - secure: RcTCf1WRsZfw3lEuUE+WS96cUZ0kuYxdgFy0CVrCB7oR7GZd6jxupJgJsbpG/29XlAWyhwIthmWof/tU/3lS+OKFKKXw7qjpc/nUQwKwC6RvDnHt1w+4GbUh1NiNcuIlMMnquWFlAmQ9ubs86nIfez0WP+RVWy4KK8i9H1R1wGdw5DD+dlZ5Ckm0qSaBPrpBC7ML/17/JD5T9UDPAB5G3qYJ6w9tmvMLx9xEsGG7b79plIu9xGpVWVZqoidOQCN9fb1WmmdGkC0EwWb+b7cZ1JgTB+/wdOyEJpaabKVj87jS/B1kAZWw5LhMXQPcee4TxKlIBBbIme3aoxrqqJ+4qz8GCuvgRdqi9DyJL3i3EVfoDeje4gjzka9IetV8cJ4n1tYnEdt6Ft2zwMlTa6SggJR4dc142IuG7W/nmlHbLOnZuy8XYgk2GHlnUcEpOI3FQ7ln59EPPKBKla+YO8BiNGTum4DHHaMcvhv5976Ho3Z8d7+vgT0IpJChvBBuGOrcjFHTStABFt9S78xqjXmR2aOXe9SNYUi4bQX4DWHAb+3sDjofVb+xnRCCkrxZ4+YUgmj2pJhrAnDTsgFCvDwl4UaqAyhcjdSQukTIg0+O15/Oj/lSMpRarFgVezyootP6wzoVGR/lc/B0w243xTW4NsX5nKb4AgMBpsDYB3YCDug=
