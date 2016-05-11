@@ -41,7 +41,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
-libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
+// Exclude common logging in all dependancies, and just have it as a top level dependency in this project
+libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging")) }
 
 // causes merge problem when building fat JAR, but is not needed
 assemblyMergeStrategy in assembly := {

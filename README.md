@@ -103,7 +103,6 @@ val subscriber: Subscriber[StringProducerMessage] = nakadi.publish(ProducerPrope
   eventType = "destination-event-type"
 ))
 
-
 Source
   .fromPublisher(publisher)
   .map(someProcessingOfMessage)
