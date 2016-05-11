@@ -29,6 +29,7 @@ val commonSettings = sonatypeSettings ++ Seq(
 
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
+  "commons-logging" % "commons-logging" % "1.1.1",
   "com.typesafe.play" %% "play-json" % akkaVersion,
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -40,13 +41,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )
 
-libraryDependencies ~= { _.map {
-  case m if m.organization == "com.typesafe.play" =>
-    m.exclude("commons-logging", "commons-logging")
-  case m if m.organization == "com.typesafe.akka" =>
-    m.exclude("commons-logging", "commons-logging")
-  case m => m
-}}
+libraryDependencies ~= { _ map(_.exclude("commons-logging", "commons-logging"))}
 
 // causes merge problem when building fat JAR, but is not needed
 assemblyMergeStrategy in assembly := {
