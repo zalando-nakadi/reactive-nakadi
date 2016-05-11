@@ -1,5 +1,5 @@
-name := """reactive-nakadi"""
-organization := "de.zalando"
+name := """reactive-nakadi-core"""
+organization := "org.zalando.reactivenakadi"
 
 version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.7"

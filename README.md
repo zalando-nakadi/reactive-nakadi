@@ -30,9 +30,9 @@ implicit val materializer = ActorMaterializer()
 
 This example is the simplest use case, a consumer that consumes events from Nakadi:
 ```scala
-import de.zalando.react.nakadi.properties._
+import org.zalando.react.nakadi.properties._
 import de.zalando.react.nakadi.ReactiveNakadi
-import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
+import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
 import de.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
@@ -71,9 +71,9 @@ Finally the `partition` value *unfortunately* needs to be hard coded. This is la
 This example will build on the previous, say we want to consume messages, and then publish the resulting message to another event-type in Nakadi.
 
 ```scala
-import de.zalando.react.nakadi.properties._
+import org.zalando.react.nakadi.properties._
 import de.zalando.react.nakadi.ReactiveNakadi
-import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
+import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
 import de.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
@@ -111,9 +111,9 @@ Source
 So say we are consuming messages, but we want to keep track of where we are on the stream, i.e. we want to keep track of the Nakadi offsets. So again, based from our first example we have:
 
 ```scala
-import de.zalando.react.nakadi.properties._
+import org.zalando.react.nakadi.properties._
 import de.zalando.react.nakadi.ReactiveNakadi
-import de.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
+import org.zalando.react.nakadi.commit.handlers.aws.DynamoDBCommitManager
 import de.zalando.react.nakadi.NakadiMessages.{
   BeginOffset, ProducerMessage, StringConsumerMessage, StringProducerMessage
 }
