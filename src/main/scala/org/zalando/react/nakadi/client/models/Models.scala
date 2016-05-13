@@ -12,12 +12,21 @@ case class EventMetadata(
   flow_id: Option[String] = None
 )
 
-case class Event(
+sealed trait Event {
+  def metadata: EventMetadata
+}
+
+case class BusinessEvent(
+  metadata: EventMetadata,
+  payload: EventPayload
+) extends Event
+
+case class DataChangeEvent(
   data_type: String,
   data_op: DataOpEnum.DataOp,
   data: EventPayload, // Raw payload for event
   metadata: EventMetadata
-)
+) extends Event
 
 case class Cursor(
   partition: String,

@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
-import org.zalando.react.nakadi.client.models.{DataOpEnum, Event, EventMetadata, EventPayload}
+import org.zalando.react.nakadi.client.models._
 import org.zalando.react.nakadi.NakadiMessages.{Cursor, Offset, ProducerMessage, ConsumerMessage}
 
 import scala.concurrent.Await
@@ -22,7 +22,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
   override implicit val system: ActorSystem = ActorSystem("ReactiveNakadiSubscriberSpec")
 
   def generateEvent = {
-    Event(
+    DataChangeEvent(
       data_type = "test_data_type",
       data_op = DataOpEnum.C,
       data = Json.parse(s"""{"foo": "bar"}""").as[EventPayload],
@@ -35,12 +35,30 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
   }
 
   def validateEvent(event1: Event, event2: Event): Unit = {
-    event1.data_op should === (event2.data_op)
-    event1.data_type should === (event2.data_type)
-    event1.data should === (event2.data)
-    event1.metadata.flow_id should === (event2.metadata.flow_id)
-    event1.metadata.eid should === (event2.metadata.eid)
-    event1.metadata.event_type should === (Some(eventType))
+
+    def validateDataEvent(event1: DataChangeEvent, event2: DataChangeEvent) = {
+      event1.data_op should === (event2.data_op)
+      event1.data_type should === (event2.data_type)
+      event1.data should === (event2.data)
+      event1.metadata.flow_id should === (event2.metadata.flow_id)
+      event1.metadata.eid should === (event2.metadata.eid)
+      event1.metadata.event_type should === (Some(eventType))
+    }
+
+    def validateBusinessEvent(event1: BusinessEvent, event2: BusinessEvent) = {
+      event1.payload should === (event2.payload)
+      event1.metadata.flow_id should === (event2.metadata.flow_id)
+      event1.metadata.eid should === (event2.metadata.eid)
+      event1.metadata.event_type should === (Some(eventType))
+    }
+
+    (event1, event2) match {
+      case (b1: BusinessEvent, b2: BusinessEvent) => validateBusinessEvent(b1, b2)
+      case (d1: DataChangeEvent, d2: DataChangeEvent) => validateDataEvent(d1, d2)
+      case _ => fail("event are not the same")
+    }
+
+
   }
 
   "Reactive-Nakadi Subscriber" should "consume a single messages" in {
