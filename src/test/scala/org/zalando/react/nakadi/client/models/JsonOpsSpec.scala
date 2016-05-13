@@ -15,8 +15,8 @@ class JsonOpsSpec extends WordSpec with Matchers {
       |{
       |  "metadata": {
       |    "eid": "7b7c7100-0559-11e6-a837-0800200c9a66",
-      |    "occurred_at": "2016-04-01T15:42:16.000+02:00",
-      |    "event_type": "fulfillment.shipment-order-created"
+      |    "occurred_at": "2016-04-01T13:42:16.000Z",
+      |    "event_type": "order-created"
       |  },
       |  "id": "504c91de-17c9-46d8-81ee-55135084d696"
       |}
@@ -25,13 +25,13 @@ class JsonOpsSpec extends WordSpec with Matchers {
   val dataChangeEvent =
     """
       |{
-      |  "data_type": "pennybags:order",
+      |  "data_type": "order",
       |  "data_op": "C",
       |  "data": {"some": "payload"},
       |  "metadata": {
       |    "eid": "7b7c7100-0559-11e6-a837-0800200c9a66",
-      |    "occurred_at": "2016-04-01T15:42:16.000+02:00",
-      |    "event_type": "fulfillment.shipment-order-created"
+      |    "occurred_at": "2016-04-01T13:42:16.000Z",
+      |    "event_type": "order-created"
       |  }
       |}
     """.stripMargin

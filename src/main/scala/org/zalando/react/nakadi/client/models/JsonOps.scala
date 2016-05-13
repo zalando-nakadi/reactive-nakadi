@@ -4,7 +4,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 import org.joda.time.format.ISODateTimeFormat
 
 import scala.util.control.Exception.nonFatalCatch
@@ -14,7 +14,7 @@ object JsonOps {
 
   implicit val jodaDateTimeReads = Reads[DateTime] {
     _.validate[String].flatMap { dateStr =>
-      nonFatalCatch.either(DateTime.parse(dateStr, ISODateTimeFormat.dateTime())).fold(
+      nonFatalCatch.either(new DateTime(dateStr, DateTimeZone.UTC)).fold(
         ex => JsError(Seq(JsPath() -> Seq(ValidationError(ex.getMessage)))),
         JsSuccess(_)
       )
