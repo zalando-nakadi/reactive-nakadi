@@ -4,7 +4,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 import org.joda.time.format.ISODateTimeFormat
 
 import scala.util.control.Exception.nonFatalCatch
@@ -14,7 +14,7 @@ object JsonOps {
 
   implicit val jodaDateTimeReads = Reads[DateTime] {
     _.validate[String].flatMap { dateStr =>
-      nonFatalCatch.either(new DateTime(dateStr)).fold(
+      nonFatalCatch.either(new DateTime(dateStr, DateTimeZone.UTC)).fold(
         ex => JsError(Seq(JsPath() -> Seq(ValidationError(ex.getMessage)))),
         JsSuccess(_)
       )
@@ -39,19 +39,47 @@ object JsonOps {
     (__ \ "flow_id").writeNullable[String]
   )(unlift(EventMetadata.unapply))
 
-  implicit val readsEvent: Reads[Event] = (
+  implicit val readsDataChangeEvent: Reads[DataChangeEvent] = (
     (__ \ "data_type").read[String] and
     (__ \ "data_op").read[String].map(DataOpEnum.apply) and
     (__ \ "data").read[EventPayload] and
     (__ \ "metadata").read[EventMetadata]
-  )(Event)
+  )(DataChangeEvent)
 
-  implicit val writesEvent: Writes[Event] = (
+  implicit val writesDataChangeEvent: Writes[DataChangeEvent] = (
     (__ \ "data_type").write[String] and
     (__ \ "data_op").write[String].contramap(DataOpEnum.contrapply) and
     (__ \ "data").write[EventPayload] and
     (__ \ "metadata").write[EventMetadata]
-  )(unlift(Event.unapply))
+  )(unlift(DataChangeEvent.unapply))
+
+  implicit val readsBusinessEvent: Reads[BusinessEvent] = (
+    (__ \ "metadata").read[EventMetadata] and
+    (__ \ 'metadata).json.prune
+    )(BusinessEvent)
+
+  implicit val writesBusinessEvent: Writes[BusinessEvent] = new Writes[BusinessEvent] {
+    override def writes(o: BusinessEvent): JsValue = Json.obj(
+      "metadata" -> o.metadata
+    ) ++ o.payload
+  }
+
+  implicit val readsEvent: Reads[Event] = new Reads[Event] {
+    override def reads(json: JsValue): JsResult[Event] = {
+      if ((json \ "data").toOption.isDefined) {
+        json.validate[DataChangeEvent]
+      } else {
+        json.validate[BusinessEvent]
+      }
+    }
+  }
+
+  implicit val writesEvent: Writes[Event] = new Writes[Event] {
+    override def writes(o: Event): JsValue = o match {
+      case be: BusinessEvent => Json.toJson(be)(writesBusinessEvent) //needed because it enters endless loop, possibly bug in play-json
+      case dce: DataChangeEvent => Json.toJson(dce)(writesDataChangeEvent)
+    }
+  }
 
   implicit val readsCursor: Reads[Cursor] = (
     (__ \ "partition").read[String] and
