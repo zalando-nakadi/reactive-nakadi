@@ -15,7 +15,7 @@ An important point to note is that it is a library that can only be used in an A
 Available at Nexus Repository for Scala 2.11:
 
 ```scala
-libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.02"
+libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.03"
 ```
 
 ###Usage
@@ -148,6 +148,21 @@ This will periodically checkpoint the offset to DynamoDB. By default the commit 
 It is important to note that the message type `StringConsumerMessage` is sent all the way through the flow. In other words, in the above example, the `someProcessingOfMessage` must return the message so that it can be then picked up by the commit sink.
 
 Reactive-nakadi will take care of creating the DynamoDB table if it does not exist. The name will come under the following format `reactive-nakadi-{event-type}-{groupId}`. It will contain a row per partition, on which each "primary key" is the partitionId.
+
+####Reading events
+Below is an example in reading events from nakadi. You can read either a `DataChangeEvent` or a `BusinessEvent`
+
+```scala
+def read(message: StringConsumerMessage) = {
+  message.events.map { event =>
+    val dataChangeEvent = event.asInstanceOf[DataChangeEvent]  // Can also be read as instance of BusinessEvent
+    println(dataChangeEvent.data_type)
+    println(dataChangeEvent.data_op)
+    println(dataChangeEvent.data)
+    println(dataChangeEvent.metadata)
+  }
+}
+```
 
 ###Tuning
 
