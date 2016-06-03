@@ -1,11 +1,21 @@
 package org.zalando.react.nakadi
 
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.util.FastFuture
+import akka.stream.{Supervision, ActorAttributes, ActorMaterializer}
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
+import akka.stream.scaladsl.{Sink, Flow}
 import org.reactivestreams.{Publisher, Subscriber}
 import org.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
+import org.zalando.react.nakadi.client._
 import org.zalando.react.nakadi.commit.{CommitSink, NakadiSink}
 import org.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
+import play.api.libs.json.Json
+
+import scala.util.{Failure, Success}
 
 
 class ReactiveNakadi {
@@ -84,6 +94,66 @@ class ReactiveNakadi {
 
   def consumeWithOffsetSink(props: ConsumerProperties)(implicit actorSystem: ActorSystem): PublisherWithCommitSink = {
     consumeWithOffsetSink(props, ReactiveNakadi.ConsumerDefaultDispatcher)
+  }
+
+  def producerFlow(producerProperties: ProducerProperties)(implicit system: ActorSystem): Flow[ProducerMessage, Seq[String], NotUsed] = {
+    import org.zalando.react.nakadi.client.models.JsonOps._
+
+
+    import akka.http.scaladsl.model.MediaTypes._
+    import akka.http.scaladsl.model.headers._
+    import concurrent.duration._
+
+    implicit val materializer = ActorMaterializer()
+
+    val superPool = Http().superPool[Seq[String]]()
+
+    val uri = s"${producerProperties.serverProperties}${URI_POST_EVENTS.format(producerProperties.eventType)}"
+
+    val requestWithoutToken = HttpRequest(
+      method = HttpMethods.POST,
+      uri = Uri(uri),
+      headers = List(Accept(MediaRange(`application/json`)))
+    )
+
+    implicit val ex = system.dispatcher
+
+    val request = producerProperties.tokenProvider.fold(requestWithoutToken) { tokenFactory =>
+      requestWithoutToken.addHeader(Authorization(OAuth2BearerToken(tokenFactory())))
+    }
+
+    val flow: Flow[ProducerMessage, Seq[String], NotUsed] = Flow[ProducerMessage]
+      .map { case ProducerMessage(eventRecords) =>
+        val requestWithEntity = request.withEntity(
+          HttpEntity(ContentType(`application/json`),
+            Json.toJson(eventRecords).toString)
+        )
+
+        eventRecords.headOption.flatMap(_.metadata.flow_id).fold(requestWithEntity) { flowId =>
+          request.withHeaders(RawHeader("X-Flow-Id", flowId))
+        } -> eventRecords.map(_.metadata.eid)
+      }
+      .via(superPool)
+        .mapAsync(4) {
+          case (Success(response), eventIds) if response.status.isSuccess() =>
+            response.entity.dataBytes.runWith(Sink.ignore) map (_ => eventIds)
+
+          case (Success(response), eventIds) =>
+            response.entity.toStrict(1.second).flatMap { entity =>
+              val body = entity.data.utf8String
+              val message = s"Request failed for $uri, response code: ${response.status}. Response: $body"
+              system.log.warning(message)
+              FastFuture.failed(new RuntimeException(message))
+            }
+
+          case (Failure(exception), eventIds) =>
+              val message = s"Exception during sending request failed for $uri. Message: ${exception.getMessage}"
+              system.log.warning(message)
+              FastFuture.failed(exception)
+        }
+
+    flow.withAttributes(ActorAttributes.supervisionStrategy(Supervision.stoppingDecider))
+
   }
 
 }

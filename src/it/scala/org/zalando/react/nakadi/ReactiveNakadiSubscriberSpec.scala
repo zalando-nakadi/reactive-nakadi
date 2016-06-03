@@ -322,4 +322,18 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
+
+  it should "publish some events and return committed event ids" in {
+    val flow = nakadi.producerFlow(createProducerProperties)
+
+    val (events, eventIds) = (1 to 10).map { _ =>
+      val event = generateEvent
+      ProducerMessage(Seq(event)) -> event.metadata.eid
+    } unzip
+
+    val future = Source(events).via(flow).map(_.take(10)).runWith(Sink.seq)
+
+    val committedEventIds = Await.result(future, 20.seconds)
+    committedEventIds.flatten.toSet shouldEqual eventIds.toSet
+  }
 }
