@@ -130,7 +130,7 @@ class ReactiveNakadi {
         )
 
         eventRecords.headOption.flatMap(_.metadata.flow_id).fold(requestWithEntity) { flowId =>
-          request.withHeaders(RawHeader("X-Flow-Id", flowId))
+          requestWithEntity.withHeaders(RawHeader("X-Flow-Id", flowId))
         } -> eventRecords.map(_.metadata.eid)
       }
       .via(superPool)
