@@ -329,7 +329,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val (events, eventIds) = (1 to 10).map { _ =>
       val event = generateEvent
       ProducerMessage(Seq(event)) -> event.metadata.eid
-    } unzip
+    }.unzip
 
     val future = Source(events).via(flow).map(_.take(10)).runWith(Sink.seq)
 
