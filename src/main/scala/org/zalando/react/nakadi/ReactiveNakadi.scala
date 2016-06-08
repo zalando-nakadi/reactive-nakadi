@@ -100,7 +100,7 @@ class ReactiveNakadi {
     val parallelism = system.settings.config.getInt("producer-flow.nakadi-client-parallelism")
 
     implicit val timeout = Timeout(
-      system.settings.config.getDuration("producer-flow.nakadi-client-parallelism", TimeUnit.MILLISECONDS).milliseconds
+      system.settings.config.getDuration("producer-flow.nakadi-client-timeout", TimeUnit.MILLISECONDS).milliseconds
     )
 
     Flow[(ProducerMessage, T)]
