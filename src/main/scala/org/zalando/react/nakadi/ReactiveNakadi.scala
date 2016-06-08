@@ -1,11 +1,19 @@
 package org.zalando.react.nakadi
 
+import java.util.concurrent.TimeUnit
+
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
+import akka.stream.scaladsl.Flow
+import akka.util.Timeout
 import org.reactivestreams.{Publisher, Subscriber}
 import org.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, ProducerMessage}
+import org.zalando.react.nakadi.client._
 import org.zalando.react.nakadi.commit.{CommitSink, NakadiSink}
 import org.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
+import akka.pattern.ask
+import scala.concurrent.duration._
 
 
 class ReactiveNakadi {
@@ -84,6 +92,21 @@ class ReactiveNakadi {
 
   def consumeWithOffsetSink(props: ConsumerProperties)(implicit actorSystem: ActorSystem): PublisherWithCommitSink = {
     consumeWithOffsetSink(props, ReactiveNakadi.ConsumerDefaultDispatcher)
+  }
+
+  def producerFlow[T](producerProperties: ProducerProperties)(implicit system: ActorSystem): Flow[(ProducerMessage, T), T, NotUsed] = {
+    val producer = new ReactiveNakadiProducer(producerProperties, system)
+    implicit val ex = system.dispatcher
+    val parallelism = system.settings.config.getInt("producer-flow.nakadi-client-parallelism")
+
+    implicit val timeout = Timeout(
+      system.settings.config.getDuration("producer-flow.nakadi-client-timeout", TimeUnit.MILLISECONDS).milliseconds
+    )
+
+    Flow[(ProducerMessage, T)]
+      .mapAsync(parallelism) { case (producerMessage, correlationMarker) =>
+        (producer.nakadiClient ? producerMessage).map { case NakadiClientImpl.MessagePublished => correlationMarker }
+      }
   }
 
 }
