@@ -97,14 +97,14 @@ class ReactiveNakadi {
   def producerFlow[T](producerProperties: ProducerProperties)(implicit system: ActorSystem): Flow[(ProducerMessage, T), T, NotUsed] = {
     val producer = new ReactiveNakadiProducer(producerProperties, system)
     implicit val ex = system.dispatcher
-    val paralellism = system.settings.config.getInt("producer-flow.nakadi-client-parallelism")
+    val parallelism = system.settings.config.getInt("producer-flow.nakadi-client-parallelism")
 
     implicit val timeout = Timeout(
       system.settings.config.getDuration("producer-flow.nakadi-client-parallelism", TimeUnit.MILLISECONDS).milliseconds
     )
 
     Flow[(ProducerMessage, T)]
-      .mapAsync(4) { case (producerMessage, correlationMarker) =>
+      .mapAsync(parallelism) { case (producerMessage, correlationMarker) =>
         (producer.nakadiClient ? producerMessage).map { case NakadiClientImpl.MessagePublished => correlationMarker }
       }
   }
