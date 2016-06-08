@@ -5,7 +5,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import org.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
 import org.zalando.react.nakadi.client.providers._
 import org.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties, ServerProperties}
-
+import akka.pattern._
 import scala.concurrent.Future
 
 
@@ -35,6 +35,8 @@ object NakadiClientImpl {
     )
     Props(new NakadiClientImpl(p))
   }
+
+  case object MessagePublished
 }
 
 
@@ -42,7 +44,11 @@ class NakadiClientImpl(val properties: Properties) extends Actor
   with ActorLogging
   with NakadiClient {
 
+  import NakadiClientImpl.MessagePublished
+
   final implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system))
+
+  implicit val ec = context.dispatcher
 
   val clientProvider = new HttpClientProvider(
     actorContext = context,
@@ -57,7 +63,7 @@ class NakadiClientImpl(val properties: Properties) extends Actor
 
   override def receive: Receive = {
     case ConsumeCommand.Start => listenForEvents(sender())
-    case producerMessage: ProducerMessage => publishEvent(producerMessage)
+    case producerMessage: ProducerMessage => publishEvent(producerMessage).map(_ => MessagePublished) pipeTo sender()
     case eventTypeMessage: EventTypeMessage => postEventType(eventTypeMessage: EventTypeMessage)
   }
 
