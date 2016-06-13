@@ -211,7 +211,7 @@ class ProduceEvents(properties: ProducerProperties,
 
       // FIXME Just taking head option for now. Need confirmation on how this works with regard to Nakadi API
       val finalRequest = producerMessage.eventRecords.headOption.flatMap(_.metadata.flow_id).fold(request) { flow =>
-        request.withHeaders(RawHeader("X-Flow-Id", flow))
+        request.addHeader(RawHeader("X-Flow-Id", flow))
       }
 
       Source
