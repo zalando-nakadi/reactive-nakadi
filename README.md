@@ -66,7 +66,7 @@ From the above example you will note a couple of things. First is the optional `
 
 Second thing you will notice is the `commitHandler`. This is required, so it is important your application is authenticated with AWS. You can authenticate using the AWS environment variables, or `~/.aws/credentials`. Take a look at the AWS documentation for more examples.
 
-The third parameter `offset` is optional, but if left empty it will try to read the latest commit from the commit handler.  If there are no commits available, it will read from the `BEGIN` offset value in Nakadi. Alternatively you can set it to `Option(Offset("120"))` or `Option(BeginOffset)`. Both of which can be imported from `import org.zalando.react.nakadi.NakadiMessages.{ BeginOffset, Offset }`
+The `offset` parameter is optional. If left empty, it will try to read the latest commit from the commit handler.  If there are no commits available, it will read from the `BEGIN` offset value in Nakadi. Alternatively you can set it to `Option(Offset("120"))` or `Option(BeginOffset)`. Both of which can be imported from `import org.zalando.react.nakadi.NakadiMessages.{ BeginOffset, Offset }`
 
 Finally the `partition` value *unfortunately* needs to be hard coded. This is later to be removed when Lease Management feature is complete. This means that you will need to create multiple instances of a publisher for each partition, until the lease management feature is complete.
 
