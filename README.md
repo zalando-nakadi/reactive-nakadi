@@ -12,7 +12,7 @@ An important point to note is that it is a library that can only be used in an A
 
 ###Installation
 
-Available at Nexus Repository for Scala 2.11:
+Available in Maven Central for Scala 2.11:
 
 ```scala
 libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.03"
@@ -33,6 +33,7 @@ implicit val materializer = ActorMaterializer()
 ####Consuming Messages from Nakadi
 
 This example is the simplest use case, a consumer that consumes events from Nakadi:
+
 ```scala
 import org.zalando.react.nakadi.properties._
 import org.zalando.react.nakadi.ReactiveNakadi
@@ -64,11 +65,11 @@ Source
 ```
 From the above example you will note a couple of things. First is the optional `tokenProvider`. Just set it to some form of callable, such as `val tokenProvider = Option(() => "my-barer-token")`.
 
-Second thing you will notice is the `commitHandler`. This is required, so it is important your application is authenticated with AWS. You can authenticate using the AWS environment variables, or `~/.aws/credentials`. Take a look at the AWS documentation for more examples.
+Second thing you will notice is the `commitHandler`. This is required, so it is important your application is authenticated with AWS. This is because the provided commit handler, `DynamoDBCommitManager` relies on AWS DynamoDB. You can authenticate using the AWS environment variables, or `~/.aws/credentials`. Take a look at the AWS documentation for more examples.
 
 The third parameter `offset` is optional, but if left empty it will try to read the latest commit from the commit handler.  If there are no commits available, it will read from the `BEGIN` offset value in Nakadi. Alternatively you can set it to `Option(Offset("120"))` or `Option(BeginOffset)`. Both of which can be imported from `import org.zalando.react.nakadi.NakadiMessages.{ BeginOffset, Offset }`
 
-Finally the `partition` value *unfortunately* needs to be hard coded. This is later to be removed when Lease Management feature is complete. This means that you will need to create multiple instances of a publisher for each partition, until the lease management feature is complete.
+Finally the `partition` value *unfortunately* needs to be hard coded. This is later to be removed when Lease Management feature is complete. This means that you will need to create multiple instances of a publisher, one for each partition, until the lease management feature is complete.
 
 ####Publishing Messages to Nakadi
 

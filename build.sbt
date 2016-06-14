@@ -9,7 +9,7 @@ val commonSettings = sonatypeSettings ++ Seq(
   startYear := Some(2016),
   scalaVersion := "2.11.7",
   test in assembly := {},
-  licenses := Seq("Apache License 2.0" -> url("https://opensource.org/licenses/MIT")),
+  licenses := Seq("MIT license" -> url("https://opensource.org/licenses/MIT")),
   homepage := Some(url("https://github.com/zalando/reactive-nakadi")),
   scalacOptions ++= Seq(
     "-deprecation",
