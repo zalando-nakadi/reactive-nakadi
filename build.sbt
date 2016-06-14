@@ -30,7 +30,7 @@ val commonSettings = sonatypeSettings ++ Seq(
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
   "commons-logging" % "commons-logging" % "1.1.1",
-  "com.typesafe.play" %% "play-json" % akkaVersion,
+  "com.typesafe.play" %% "play-json" % "2.5.4",
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
