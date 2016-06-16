@@ -112,7 +112,7 @@ Source
 ```
 
 ####Committing Offsets
-So say we are consuming messages, but we want to keep track of where we are on the stream, i.e. we want to keep track of the Nakadi offsets. So again, based from our first example we have:
+So say we are consuming messages, but we want to keep track of where we are on the stream, i.e. we want to keep track of the Nakadi offsets. So again, based on our first example we have:
 
 ```scala
 import org.zalando.react.nakadi.properties._
@@ -148,10 +148,10 @@ This will periodically checkpoint the offset to DynamoDB. By default the commit 
 
 It is important to note that the message type `StringConsumerMessage` is sent all the way through the flow. In other words, in the above example, the `someProcessingOfMessage` must return the message so that it can be then picked up by the commit sink.
 
-Reactive-nakadi will take care of creating the DynamoDB table if it does not exist. The name will come under the following format `reactive-nakadi-{event-type}-{groupId}`. It will contain a row per partition, on which each "primary key" is the partitionId.
+Reactive-nakadi will take care of creating the DynamoDB table if it does not exist. The name will come under the format `reactive-nakadi-{event-type}-{groupId}`. It will contain a row per partition, on which each "primary key" is the partitionId.
 
 ####Reading events
-Below is an example in reading events from nakadi. You can read either a `DataChangeEvent` or a `BusinessEvent`
+Below is an example of reading events from nakadi. You can read either a `DataChangeEvent` or a `BusinessEvent`
 
 ```scala
 def read(message: StringConsumerMessage) = {
