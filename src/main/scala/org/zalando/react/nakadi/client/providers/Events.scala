@@ -110,16 +110,16 @@ class ConsumeEvents(properties: ConsumerProperties,
     val consumer = Flow[HttpResponse].mapAsync(1) {
       case HttpResponse(status, _, entity, _) if status.isSuccess() =>
         log.info(s"Successfully connected to Nakadi on ${properties.serverProperties}/")
-        Future.successful(
+        Future.successful {
           RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
-          import GraphDSL.Implicits._
-          val in = entity.dataBytes
+            import GraphDSL.Implicits._
+            val in = entity.dataBytes
 
-          in ~> delimiter ~> stringify ~> debug ~> unmarshal ~> out
+            in ~> delimiter ~> stringify ~> debug ~> unmarshal ~> out
 
-          ClosedShape
-        }).run()
-        )
+            ClosedShape
+          }).run()
+        }
       case HttpResponse(status, _, entity, _) =>
         handleInvalidResponse(entity, uri, status.value)(log.warning)
     }
