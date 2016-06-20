@@ -1,5 +1,6 @@
 package org.zalando.react.nakadi.client.providers
 
+import akka.Done
 import akka.stream._
 import akka.util.ByteString
 import akka.event.LoggingAdapter
@@ -9,14 +10,12 @@ import akka.actor.{ActorContext, ActorRef}
 import akka.http.scaladsl.model.MediaTypes._
 import akka.stream.scaladsl.{Flow, Framing, GraphDSL, RunnableGraph, Sink, Source}
 import akka.http.scaladsl.model.headers.{OAuth2BearerToken, RawHeader}
-
 import play.api.libs.json.Json
-
 import org.zalando.react.nakadi.client.models._
 import org.zalando.react.nakadi.client.models.JsonOps._
 import org.zalando.react.nakadi.NakadiMessages.{EventTypeMessage, ProducerMessage}
 import org.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperties}
-import org.zalando.react.nakadi.client.{URI_POST_EVENT_TYPES, URI_STREAM_EVENTS, URI_POST_EVENTS, Properties}
+import org.zalando.react.nakadi.client.{Properties, URI_POST_EVENTS, URI_POST_EVENT_TYPES, URI_STREAM_EVENTS}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,8 +40,9 @@ trait BaseProvider {
 
     entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.utf8String).map { b =>
       logHandler(s"Request failed for $uri, response code: $status. Response: $b")
+    } flatMap { _ =>
+      Future.failed(new RuntimeException("Error with Nakadi response"))
     }
-    sys.error("Error with Nakadi response")
   }
 
   def handleConnectionError(error: Throwable)(logHandler: (Throwable, String) => Unit) = error match {
@@ -107,18 +107,21 @@ class ConsumeEvents(properties: ConsumerProperties,
       onFailureMessage = x => x
     )
 
-    val consumer = Flow[HttpResponse].map {
+    val consumer = Flow[HttpResponse].mapAsync(1) {
       case HttpResponse(status, _, entity, _) if status.isSuccess() =>
         log.info(s"Successfully connected to Nakadi on ${properties.serverProperties}/")
-        RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
-          import GraphDSL.Implicits._
-          val in = entity.dataBytes
+        Future.successful {
+          RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
+            import GraphDSL.Implicits._
+            val in = entity.dataBytes
 
-          in ~> delimiter ~> stringify ~> debug ~> unmarshal ~> out
+            in ~> delimiter ~> stringify ~> debug ~> unmarshal ~> out
 
-          ClosedShape
-        }).run()
-      case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
+            ClosedShape
+          }).run()
+        }
+      case HttpResponse(status, _, entity, _) =>
+        handleInvalidResponse(entity, uri, status.value)(log.warning)
     }
 
     request.flatMap {
@@ -217,10 +220,10 @@ class ProduceEvents(properties: ProducerProperties,
       Source
         .single(finalRequest)
         .via(clientProvider.connection)
-        .runWith(Sink.foreach {
-          case HttpResponse(status, _, _, _) if status.isSuccess() => ()
+        .mapAsync(4) {
+          case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
-        }).recover { case err => handleConnectionError(err)(log.error) }
+        }.runWith(Sink.ignore).recover { case err => handleConnectionError(err)(log.error) }
         .map(_ => ())
     }
   }
@@ -265,10 +268,10 @@ class PostEventType(properties: Properties,
       Source
         .single(finalRequest)
         .via(clientProvider.connection)
-        .runWith(Sink.foreach {
-          case HttpResponse(status, _, _, _) if status.isSuccess() => ()
+        .mapAsync(4) {
+          case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
-        }).recover { case err => handleConnectionError(err)(log.error) }
+        }.runWith(Sink.ignore).recover { case err => handleConnectionError(err)(log.error) }
         .map(_ => ())
     }
   }
