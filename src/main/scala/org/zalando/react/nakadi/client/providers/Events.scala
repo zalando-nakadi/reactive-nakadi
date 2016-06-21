@@ -18,6 +18,7 @@ import org.zalando.react.nakadi.properties.{ConsumerProperties, ProducerProperti
 import org.zalando.react.nakadi.client.{Properties, URI_POST_EVENTS, URI_POST_EVENT_TYPES, URI_STREAM_EVENTS}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 
 object ConsumeCommand {
@@ -43,15 +44,6 @@ trait BaseProvider {
     } flatMap { _ =>
       Future.failed(new RuntimeException("Error with Nakadi response"))
     }
-  }
-
-  def handleConnectionError(error: Throwable)(logHandler: (Throwable, String) => Unit) = error match {
-    case err: StreamTcpException =>
-      logHandler(err, s"Error with Nakadi ${err.getMessage}")
-      sys.error("Error with Nakadi")
-    case ex =>
-      logHandler(ex, "Error with Nakadi")
-      sys.error("Error with Nakadi")
   }
 }
 
@@ -131,7 +123,11 @@ class ConsumeEvents(properties: ConsumerProperties,
         .via(consumer)
         .runWith(Sink.ignore)
         .map(_ => ())
-        .recover { case err => handleConnectionError(err)(log.error) }
+        .recover {
+          case NonFatal(err) =>
+            log.error(err, s"Nakadi connection error: ${err.getMessage}")
+            receiverActorRef ! err
+        }
     }
   }
 
@@ -223,7 +219,8 @@ class ProduceEvents(properties: ProducerProperties,
         .mapAsync(4) {
           case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
-        }.runWith(Sink.ignore).recover { case err => handleConnectionError(err)(log.error) }
+        }.runWith(Sink.ignore)
+        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}") }
         .map(_ => ())
     }
   }
@@ -271,7 +268,8 @@ class PostEventType(properties: Properties,
         .mapAsync(4) {
           case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
-        }.runWith(Sink.ignore).recover { case err => handleConnectionError(err)(log.error) }
+        }.runWith(Sink.ignore)
+        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}") }
         .map(_ => ())
     }
   }
