@@ -2,7 +2,6 @@ package org.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
 import akka.actor.{ActorLogging, ActorRef, PoisonPill, Props}
-
 import org.zalando.react.nakadi.commit.OffsetMap
 import org.zalando.react.nakadi.LeaseManagerActor.Flush
 import org.zalando.react.nakadi.client.models.EventStreamBatch
@@ -11,6 +10,7 @@ import org.zalando.react.nakadi.NakadiActorPublisher.CommitOffsets
 import org.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage}
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 
 object NakadiActorPublisher {
@@ -52,6 +52,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
     case Cancel                                           => stop()
     case NakadiActorPublisher.Stop                        => stop()
     case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
+    case NonFatal(err)                                    => onError(err)
   }
 
   private def registerSupervisor(ref: ActorRef) = {
