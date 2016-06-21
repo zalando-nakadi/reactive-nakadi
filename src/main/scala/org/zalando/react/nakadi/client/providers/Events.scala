@@ -104,7 +104,7 @@ class ConsumeEvents(properties: ConsumerProperties,
       onInitMessage = Init,
       ackMessage = Acknowledge,
       onCompleteMessage = Complete,
-      onFailureMessage = x => x
+      onFailureMessage = receiverActorRef ! _
     )
 
     val consumer = Flow[HttpResponse].mapAsync(1) {
