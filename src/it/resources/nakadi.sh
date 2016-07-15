@@ -48,7 +48,7 @@ function start_nakadi {
     echo -n "Building Nakadi... "
     export PUBLISH_NAKADI_PORT="-p $NAKADI_PORT:$NAKADI_PORT"
     cd $DIRECTORY/
-    ./gradlew startDockerContainer
+    ./gradlew startNakadi
     cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
@@ -68,7 +68,7 @@ function start_nakadi {
 function stop_nakadi {
     echo -n "Stopping Nakadi... "
     cd $DIRECTORY/
-    ./gradlew stopAndRemoveDockerContainer
+    ./gradlew stopNakadi
     cd -
     rm -rf $DIRECTORY/
     echo -e "Nakadi stopped ${OK}✔${RESET}"
