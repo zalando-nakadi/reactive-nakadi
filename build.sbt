@@ -1,6 +1,6 @@
 name := """reactive-nakadi-core"""
 
-val akkaVersion = "2.4.2"
+val akkaVersion = "2.4.7"
 
 resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 
