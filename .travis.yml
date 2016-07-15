@@ -3,7 +3,6 @@ sudo: required
 
 env:
   - DOCKER_IP=127.0.0.1
-  - DOCKER_COMPOSE_VERSION=1.6.1
 
   global:
     - secure: pucnGYKmiGHmjIx7yf3HUhsvzjAJwE2vhvFcOvPYwy8PoIG51nvDSpgv5criK5RCaE2/t06hZjvjvRQ04FA/vrgex+NxBJNgEZ33Lmjdx2ncYCnvVDmWY43cJva3fMznFny0wifPvs9e73Yp75tTiZctCY0iiMDhyd9tCHOhRYs2Dwr1Sg5QBF616rgZRiY9iYWyo0TR1IEB8diBvTX5WFWJQtMcAF2U3BhP8SS44ds7W5Abz/vWcQJI27lnqUQstfEGkZiWMTLEGakmhG4NApBEwPT8tFIEJnF8UmHF/pO1hNM22Ge7kaVAN/X2Q/wvXdmsB5bAMVFWpgI52ZfMNQwcQc0gXHA7+aQ+Hz5Fe0tbyWOxldx3Vr8ZZLUl1Ag0yFfaY/BKIcrDKgrpSmYeCaN5QyFDgv4itUTNL03qtYg3PZDS8lljI2+WOZQ86EpN+tFz2DObBB7bNMVMxSibM1+Tdy46Rft8h17KX/jla9StAYY78DlwRlAQbVBM+eGybNtQSp7QYAyOpSPdcGyQUOweBP+Ht57wPE2VNuJToYn00t+2XCyMLU9Bx5UTJx+FwhaLfkMW+3S8cMRgbNXWzz9SA/rSNsbc5AwfO2OrLnFqSgo1OAK3K/GBXIiFnlBgrMAvk6PH05aHf0HExBXIR+X1x2mT63zN9M1gL7vt9h4=
@@ -11,7 +10,7 @@ env:
 
 before_install:
   - sudo rm /usr/local/bin/docker-compose
-  - curl --verbos -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - curl --verbos -L https://github.com/docker/compose/releases/download/1.6.1/docker-compose-`uname -s`-`uname -m` > docker-compose
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
 
