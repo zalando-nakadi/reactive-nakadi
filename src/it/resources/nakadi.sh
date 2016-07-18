@@ -56,7 +56,7 @@ function start_nakadi {
     echo -n "Building Nakadi... "
     cd $DIRECTORY/
     ./gradlew assemble
-    $DOCKER_COMPOSE up
+    $DOCKER_COMPOSE up -d
     cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
@@ -77,7 +77,7 @@ function start_nakadi {
 function stop_nakadi {
     echo -n "Stopping Nakadi... "
     cd $DIRECTORY/
-    ./gradlew stopNakadi
+    $DOCKER_COMPOSE down
     cd -
     rm -rf $DIRECTORY/
     echo -e "Nakadi stopped ${OK}✔${RESET}"
