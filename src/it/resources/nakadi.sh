@@ -56,7 +56,7 @@ function start_nakadi {
     echo -n "Building Nakadi... "
     cd $DIRECTORY/
     ./gradlew assemble
-    $DOCKER_COMPOSE up -d
+    $DOCKER_COMPOSE up
     cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
