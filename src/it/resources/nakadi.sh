@@ -47,10 +47,17 @@ function start_nakadi {
     $GIT clone $REPO $DIRECTORY
     echo -e "Cloned Nakadi to ${DIRECTORY} ${OK}✔${RESET}"
 
+    echo -n "Editing some configs in $DIRECTORY... "
+    sed  -i "" "s/localhost/$DOCKER_IP/g" $DIRECTORY/build.gradle
+    sed  -i "" "s/localhost/$DOCKER_IP/g" $DIRECTORY/docker-compose.yml
+    sed  -i "" "s/localhost/$DOCKER_IP/g" $DIRECTORY/src/main/resources/application.yml
+    echo -e "Done! ${OK}✔${RESET}"
+
     echo -n "Building Nakadi... "
     cd $DIRECTORY/
     ./gradlew assemble
-    $DOCKER_COMPOSE up -d
+    $DOCKER_COMPOSE up -d --build
+    cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
     poll_counter=0
@@ -63,7 +70,7 @@ function start_nakadi {
             exit 1;
         }
     done;
-    cd -
+
     echo -e "Nakadi started ${OK}✔${RESET}"
 }
 
