@@ -6,6 +6,7 @@ FAIL="\033[31m"
 RESET="\033[0m"
 
 GIT=`which git`
+DOCKER_COMPOSE=`which docker-compose`
 DIRECTORY=/tmp/nakadi
 REPO="https://github.com/zalando/nakadi"
 NAKADI_PORT="8080"
@@ -15,6 +16,11 @@ function validate {
 
     [ -z "$DOCKER_IP" ] && {
         echo -e "You need to set DOCKER_IP env variable ${FAIL}✗${RESET}"
+        exit 1;
+    }
+
+    [ "$DOCKER_COMPOSE" = "" ] && {
+        echo -e "You need to install docker-compose ${FAIL}✗${RESET}"
         exit 1;
     }
 
@@ -41,15 +47,10 @@ function start_nakadi {
     $GIT clone $REPO $DIRECTORY
     echo -e "Cloned Nakadi to ${DIRECTORY} ${OK}✔${RESET}"
 
-    echo -n "Editing config $DIRECTORY/src/main/resources/application.yml... "
-    sed  -i "" "s/localhost:5432/$DOCKER_IP:5432/g" $DIRECTORY/src/main/resources/application.yml
-    echo -e "Done! ${OK}✔${RESET}"
-
     echo -n "Building Nakadi... "
-    export PUBLISH_NAKADI_PORT="-p $NAKADI_PORT:$NAKADI_PORT"
     cd $DIRECTORY/
-    ./gradlew startNakadi
-    cd -
+    ./gradlew assemble
+    $DOCKER_COMPOSE up -d
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
     poll_counter=0
@@ -62,6 +63,7 @@ function start_nakadi {
             exit 1;
         }
     done;
+    cd -
     echo -e "Nakadi started ${OK}✔${RESET}"
 }
 
