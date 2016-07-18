@@ -7,6 +7,13 @@ jdk:
 scala:
   - 2.11.7
 
+services:
+  - docker
+
+# fix for buffer overflow https://github.com/travis-ci/travis-ci/issues/5227
+addons:
+  hostname: localhost
+
 env:
   matrix:
     - DOCKER_IP=127.0.0.1
@@ -35,6 +42,3 @@ script:
 after_success:
   - sbt coveralls
   - "[[ $TRAVIS_BRANCH == \"master\" ]] && { sbt publish; };"
-
-services:
-  - docker
