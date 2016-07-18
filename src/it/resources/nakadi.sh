@@ -10,7 +10,7 @@ DOCKER_COMPOSE=`which docker-compose`
 DIRECTORY=/tmp/nakadi
 REPO="https://github.com/zalando/nakadi"
 NAKADI_PORT="8080"
-NAKADI_ALIVE_TIMEOUT=120
+NAKADI_ALIVE_TIMEOUT=240
 
 function validate {
 
@@ -56,7 +56,7 @@ function start_nakadi {
     echo -n "Building Nakadi... "
     cd $DIRECTORY/
     ./gradlew assemble
-    $DOCKER_COMPOSE up -d --build
+    $DOCKER_COMPOSE up -d
     cd -
 
     echo -n "Waiting on Nakadi to start (Polling http://$DOCKER_IP:8080/health) "
