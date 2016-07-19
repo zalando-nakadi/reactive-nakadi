@@ -34,7 +34,7 @@ class HttpClientProvider(actorContext: ActorContext,
 
     isConnectionSSL match {
       case true =>
-        val sslContext = if (acceptAnyCertificate) SSLContext.getDefault else {
+        val sslContext = if (!acceptAnyCertificate) SSLContext.getDefault else {
 
           val permissiveTrustManager: TrustManager = new X509TrustManager() {
             override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
