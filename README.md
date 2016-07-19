@@ -44,7 +44,7 @@ import org.zalando.react.nakadi.NakadiMessages.{
 
 val nakadi = new ReactiveNakadi()
 val server = ServerProperties(
-  host = "192.168.99.100", port = 8080, isConnectionSSL = false
+  host = "192.168.99.100", port = 8080, isConnectionSSL = false, acceptAnyCertificate = true
 )
 
 val publisher: Publisher[StringConsumerMessage] = nakadi.consume(ConsumerProperties(
