@@ -1,13 +1,12 @@
 package org.zalando.react.nakadi.client.models
 
-import org.joda.time.DateTime
-
+import java.time.ZonedDateTime
 
 case class EventMetadata(
   eid: String,
   event_type: Option[String] = None,
-  occurred_at: DateTime,
-  received_at: Option[DateTime] = None,
+  occurred_at: ZonedDateTime,
+  received_at: Option[ZonedDateTime] = None,
   parent_eids: Option[Seq[String]] = None,
   flow_id: Option[String] = None
 )

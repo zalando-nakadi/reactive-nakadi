@@ -1,8 +1,9 @@
 package org.zalando.react.nakadi
 
+import java.time.{ZoneId, ZonedDateTime}
+
 import org.zalando.react.nakadi.commit.OffsetTracking
 import org.zalando.react.nakadi.commit.handlers.BaseCommitManager
-import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
 
@@ -21,7 +22,7 @@ object InMemoryCommitCommitManager extends BaseCommitManager {
       checkpointId = value.split("-")(0),
       leaseHolder = value.split("-")(1),
       leaseCounter = Option(1),
-      leaseTimestamp = new DateTime(DateTimeZone.UTC),
+      leaseTimestamp =ZonedDateTime.now,
       leaseId = None
     )
   }
@@ -35,7 +36,7 @@ object InMemoryCommitCommitManager extends BaseCommitManager {
       checkpointId = value.split("-")(0),
       leaseHolder = value.split("-")(1),
       leaseCounter = Option(leaseCounter),
-      leaseTimestamp = new DateTime(DateTimeZone.UTC),
+      leaseTimestamp = ZonedDateTime.now,
       leaseId = None
     )
     store.put(key, generateValue(offset.checkpointId, offset.leaseHolder, count))
@@ -57,7 +58,7 @@ object InMemoryCommitCommitManager extends BaseCommitManager {
           checkpointId = value.split("-")(0),
           leaseHolder = value.split("-")(1),
           leaseCounter = Option(1),
-          leaseTimestamp = new DateTime(DateTimeZone.UTC),
+          leaseTimestamp = ZonedDateTime.now,
           leaseId = None
         )
       }

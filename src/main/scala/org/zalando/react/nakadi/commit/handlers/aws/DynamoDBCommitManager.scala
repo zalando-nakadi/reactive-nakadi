@@ -1,5 +1,8 @@
 package org.zalando.react.nakadi.commit.handlers.aws
 
+import java.time.format.DateTimeFormatter
+import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
+
 import akka.actor.ActorSystem
 import org.zalando.react.nakadi.commit.OffsetTracking
 import org.zalando.react.nakadi.commit.handlers.BaseCommitManager
@@ -8,7 +11,6 @@ import com.amazonaws.services.dynamodbv2.document.{Item, Table}
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec
 import org.zalando.react.nakadi.properties.CommitProperties
-import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
@@ -66,7 +68,7 @@ class DynamoDBCommitManager(system: ActorSystem, leaseProperties: CommitProperti
     val valueMap = new ValueMap()
       .withString(":cidval", offsetTracking.checkpointId)
       .withString(":lhval", offsetTracking.leaseHolder)
-      .withString(":ltsval", offsetTracking.leaseTimestamp.toDateTime.toString)
+      .withString(":ltsval", offsetTracking.leaseTimestamp.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
 
     var leaseIdKey = ""
     offsetTracking.leaseId.foreach { leaseId =>
@@ -107,7 +109,7 @@ class DynamoDBCommitManager(system: ActorSystem, leaseProperties: CommitProperti
       .withString(CheckpointIdKey, offsetTracking.checkpointId)
       .withString(LeaseHolderKey, offsetTracking.leaseHolder)
       .withNumber(LeaseCounterKey, 1)
-      .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.toDateTime.toString)
+      .withString(LeaseTimestampKey, offsetTracking.leaseTimestamp.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
     offsetTracking.leaseId.map(item.withString(LeaseIdKey, _))
     table.putItem(item)
     toOffsetTracking(item)
@@ -140,7 +142,7 @@ class DynamoDBCommitManager(system: ActorSystem, leaseProperties: CommitProperti
       checkpointId = item.getString(CheckpointIdKey),
       leaseHolder = item.getString(LeaseHolderKey),
       leaseCounter = Option(item.getLong(LeaseCounterKey)),
-      leaseTimestamp = new DateTime(item.getString(LeaseTimestampKey), DateTimeZone.UTC),
+      leaseTimestamp = ZonedDateTime.parse(item.getString(LeaseTimestampKey), DateTimeFormatter.ISO_OFFSET_DATE_TIME),
       leaseId = Option(item.getString(LeaseIdKey))
     )
   }

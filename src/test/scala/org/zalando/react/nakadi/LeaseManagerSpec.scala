@@ -1,6 +1,7 @@
 package org.zalando.react.nakadi
 
-import org.joda.time.{DateTime, DateTimeZone}
+import java.time.ZonedDateTime
+
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
@@ -20,7 +21,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val partitionId = "15"
   val groupId = "some-group-id"
   val eventType = "some-event-type"
-  val timestamp = new DateTime(DateTimeZone.UTC)
+  val timestamp = ZonedDateTime.now
 
   // Map of event-type-partition to offset count
   val offsetMap = OffsetMap(Map(EventTypePartition(eventType, partitionId).hash -> 10))
@@ -110,7 +111,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   it should "return true for valid validation condition" in {
     setupIdGenerator
 
-    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minus(400))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minusSeconds(400))
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 2
@@ -120,7 +121,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   it should "return true for validation if lease time stamp is after now but counter is the same" in {
     setupIdGenerator
 
-    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plus(400))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plusSeconds(400))
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 2
@@ -130,7 +131,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   it should "return true for validation if time is before now, but counter differ (i.e. stale lease)" in {
     setupIdGenerator
 
-    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minus(400))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.minusSeconds(400))
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 5
@@ -140,12 +141,12 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   it should "return false for validation if lease counters dont match lease time stamp is after now" in {
     setupIdGenerator
 
-    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plus(400))
+    val offset = offsetTracking.copy(leaseCounter = Option(2), leaseTimestamp = now.plusSeconds(400))
 
     val leaseManager = createLeaseManager
     leaseManager.counter(partitionId) = 5
     leaseManager.validate(offset) should === (false)
   }
 
-  private def now = new DateTime(DateTimeZone.UTC)
+  private def now = ZonedDateTime.now
 }

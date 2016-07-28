@@ -1,9 +1,9 @@
 package org.zalando.react.nakadi
 
+import java.time.ZonedDateTime
+
 import akka.event.LoggingAdapter
 import akka.actor.{ActorRef, ActorSystem}
-import org.joda.time.{DateTime, DateTimeZone}
-
 import org.zalando.react.nakadi.utils.IdGenerator
 import org.zalando.react.nakadi.properties.ConsumerProperties
 import org.zalando.react.nakadi.commit.handlers.{BaseCommitManager => BaseCommitHandler}
@@ -42,8 +42,8 @@ class LeaseManagerImpl(override val leaseHolder: String,
                        log: Option[LoggingAdapter],
                        idGenerator: IdGenerator = IdGenerator) extends LeaseManager {
 
-  def now = new DateTime(DateTimeZone.UTC)
-  def newLeaseTimeout = now.plusSeconds(staleLeaseDelta.length.toInt)
+  def now = ZonedDateTime.now
+  def newLeaseTimeout = now.plusSeconds(staleLeaseDelta.length)
 
   // Key / value for partition id and lease counter
   override val counter: mutable.Map[String, Long] = mutable.Map.empty
@@ -75,7 +75,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
 
   def validate(currentOffset: OffsetTracking): Boolean = {
     val count = counter.getOrElse(currentOffset.partitionId, 0L)
-    currentOffset.leaseCounter.contains(count) || currentOffset.leaseTimestamp.isBeforeNow
+    currentOffset.leaseCounter.contains(count) || currentOffset.leaseTimestamp.isBefore(now)
   }
 
   override def requestLease(groupId: String, eventType: String, partitionId: String)
