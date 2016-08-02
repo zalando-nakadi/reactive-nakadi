@@ -220,7 +220,7 @@ class ProduceEvents(properties: ProducerProperties,
           case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
         }.runWith(Sink.ignore)
-        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}") }
+        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}"); throw err }
         .map(_ => ())
     }
   }
@@ -269,7 +269,7 @@ class PostEventType(properties: Properties,
           case HttpResponse(status, _, _, _) if status.isSuccess() => Future.successful(Done)
           case HttpResponse(status, _, entity, _) => handleInvalidResponse(entity, uri, status.value)(log.warning)
         }.runWith(Sink.ignore)
-        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}") }
+        .recover { case NonFatal(err) => log.error(err, s"Nakadi connection error: ${err.getMessage}"); throw err }
         .map(_ => ())
     }
   }
