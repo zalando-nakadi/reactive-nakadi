@@ -1,7 +1,7 @@
 package org.zalando.react.nakadi.commit.handlers.aws
 
 import java.time.format.DateTimeFormatter
-import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{ZoneId, ZoneOffset, OffsetDateTime}
 
 import akka.actor.ActorSystem
 import org.zalando.react.nakadi.commit.OffsetTracking
@@ -142,7 +142,7 @@ class DynamoDBCommitManager(system: ActorSystem, leaseProperties: CommitProperti
       checkpointId = item.getString(CheckpointIdKey),
       leaseHolder = item.getString(LeaseHolderKey),
       leaseCounter = Option(item.getLong(LeaseCounterKey)),
-      leaseTimestamp = ZonedDateTime.parse(item.getString(LeaseTimestampKey), DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+      leaseTimestamp = OffsetDateTime.parse(item.getString(LeaseTimestampKey), DateTimeFormatter.ISO_OFFSET_DATE_TIME),
       leaseId = Option(item.getString(LeaseIdKey))
     )
   }

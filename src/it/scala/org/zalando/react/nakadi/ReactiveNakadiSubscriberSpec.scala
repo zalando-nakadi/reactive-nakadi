@@ -1,6 +1,6 @@
 package org.zalando.react.nakadi
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.actor.ActorSystem
@@ -27,7 +27,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
       data = Json.parse(s"""{"foo": "bar"}""").as[EventPayload],
       EventMetadata(
         eid = UUID.randomUUID().toString,
-        occurred_at = ZonedDateTime.now,
+        occurred_at = OffsetDateTime.now,
         flow_id = Option("my-test-flow-id")
       )
     )

@@ -1,12 +1,12 @@
 package org.zalando.react.nakadi.client.models
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 case class EventMetadata(
   eid: String,
   event_type: Option[String] = None,
-  occurred_at: ZonedDateTime,
-  received_at: Option[ZonedDateTime] = None,
+  occurred_at: OffsetDateTime,
+  received_at: Option[OffsetDateTime] = None,
   parent_eids: Option[Seq[String]] = None,
   flow_id: Option[String] = None
 )

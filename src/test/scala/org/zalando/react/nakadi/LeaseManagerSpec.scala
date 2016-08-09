@@ -1,6 +1,6 @@
 package org.zalando.react.nakadi
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -21,7 +21,7 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
   val partitionId = "15"
   val groupId = "some-group-id"
   val eventType = "some-event-type"
-  val timestamp = ZonedDateTime.now
+  val timestamp = OffsetDateTime.now
 
   // Map of event-type-partition to offset count
   val offsetMap = OffsetMap(Map(EventTypePartition(eventType, partitionId).hash -> 10))
@@ -148,5 +148,5 @@ class LeaseManagerSpec extends FlatSpec with Matchers with MockFactory with Scal
     leaseManager.validate(offset) should === (false)
   }
 
-  private def now = ZonedDateTime.now
+  private def now = OffsetDateTime.now
 }

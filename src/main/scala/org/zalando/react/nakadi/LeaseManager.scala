@@ -1,6 +1,6 @@
 package org.zalando.react.nakadi
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import akka.event.LoggingAdapter
 import akka.actor.{ActorRef, ActorSystem}
@@ -42,7 +42,7 @@ class LeaseManagerImpl(override val leaseHolder: String,
                        log: Option[LoggingAdapter],
                        idGenerator: IdGenerator = IdGenerator) extends LeaseManager {
 
-  def now = ZonedDateTime.now
+  def now = OffsetDateTime.now
   def newLeaseTimeout = now.plusSeconds(staleLeaseDelta.length)
 
   // Key / value for partition id and lease counter
