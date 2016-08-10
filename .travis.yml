@@ -23,13 +23,9 @@ env:
     - secure: RcTCf1WRsZfw3lEuUE+WS96cUZ0kuYxdgFy0CVrCB7oR7GZd6jxupJgJsbpG/29XlAWyhwIthmWof/tU/3lS+OKFKKXw7qjpc/nUQwKwC6RvDnHt1w+4GbUh1NiNcuIlMMnquWFlAmQ9ubs86nIfez0WP+RVWy4KK8i9H1R1wGdw5DD+dlZ5Ckm0qSaBPrpBC7ML/17/JD5T9UDPAB5G3qYJ6w9tmvMLx9xEsGG7b79plIu9xGpVWVZqoidOQCN9fb1WmmdGkC0EwWb+b7cZ1JgTB+/wdOyEJpaabKVj87jS/B1kAZWw5LhMXQPcee4TxKlIBBbIme3aoxrqqJ+4qz8GCuvgRdqi9DyJL3i3EVfoDeje4gjzka9IetV8cJ4n1tYnEdt6Ft2zwMlTa6SggJR4dc142IuG7W/nmlHbLOnZuy8XYgk2GHlnUcEpOI3FQ7ln59EPPKBKla+YO8BiNGTum4DHHaMcvhv5976Ho3Z8d7+vgT0IpJChvBBuGOrcjFHTStABFt9S78xqjXmR2aOXe9SNYUi4bQX4DWHAb+3sDjofVb+xnRCCkrxZ4+YUgmj2pJhrAnDTsgFCvDwl4UaqAyhcjdSQukTIg0+O15/Oj/lSMpRarFgVezyootP6wzoVGR/lc/B0w243xTW4NsX5nKb4AgMBpsDYB3YCDug=
 
 before_install:
-  - sudo sh -c 'echo "deb https://apt.dockerproject.org/repo ubuntu-precise main" > /etc/apt/sources.list.d/docker.list'
-  - sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-  - sudo apt-get update
-  - sudo apt-key update
-  - sudo apt-get -qqy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install docker-engine=1.11.1-0~precise
-  - sudo rm -f /usr/local/bin/docker-compose
-  - curl --verbos -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - docker --version
+  # install docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > docker-compose
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
 
