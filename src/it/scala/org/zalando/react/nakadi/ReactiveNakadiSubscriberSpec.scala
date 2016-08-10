@@ -1,15 +1,14 @@
 package org.zalando.react.nakadi
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.stream.testkit.scaladsl.TestSource
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import org.joda.time.DateTime
 import play.api.libs.json.Json
-
 import org.zalando.react.nakadi.client.models._
-import org.zalando.react.nakadi.NakadiMessages.{Cursor, Offset, ProducerMessage, ConsumerMessage}
+import org.zalando.react.nakadi.NakadiMessages.{ConsumerMessage, Cursor, Offset, ProducerMessage}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -28,7 +27,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
       data = Json.parse(s"""{"foo": "bar"}""").as[EventPayload],
       EventMetadata(
         eid = UUID.randomUUID().toString,
-        occurred_at = new DateTime(),
+        occurred_at = OffsetDateTime.now,
         flow_id = Option("my-test-flow-id")
       )
     )

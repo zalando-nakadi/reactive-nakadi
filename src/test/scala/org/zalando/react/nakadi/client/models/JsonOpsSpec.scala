@@ -1,8 +1,7 @@
 package org.zalando.react.nakadi.client.models
 
-import org.joda.time.DateTime
 import org.scalatest.{Matchers, WordSpec}
-import play.api.libs.json.{JsObject, JsString, JsValue, Json}
+import play.api.libs.json.{JsObject, JsString, Json}
 
 
 class JsonOpsSpec extends WordSpec with Matchers {
@@ -15,7 +14,7 @@ class JsonOpsSpec extends WordSpec with Matchers {
       |{
       |  "metadata": {
       |    "eid": "7b7c7100-0559-11e6-a837-0800200c9a66",
-      |    "occurred_at": "2016-04-01T13:42:16.000Z",
+      |    "occurred_at": "2016-04-01T13:42:16Z",
       |    "event_type": "order-created"
       |  },
       |  "id": "504c91de-17c9-46d8-81ee-55135084d696"
@@ -30,7 +29,7 @@ class JsonOpsSpec extends WordSpec with Matchers {
       |  "data": {"some": "payload"},
       |  "metadata": {
       |    "eid": "7b7c7100-0559-11e6-a837-0800200c9a66",
-      |    "occurred_at": "2016-04-01T13:42:16.000Z",
+      |    "occurred_at": "2016-04-01T13:42:16Z",
       |    "event_type": "order-created"
       |  }
       |}

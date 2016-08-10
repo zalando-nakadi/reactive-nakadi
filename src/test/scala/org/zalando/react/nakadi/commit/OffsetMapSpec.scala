@@ -1,6 +1,5 @@
 package org.zalando.react.nakadi.commit
 
-import org.joda.time.{DateTimeZone, DateTime}
 import org.scalatest.{Matchers, FlatSpec}
 
 

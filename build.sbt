@@ -7,7 +7,7 @@ resolvers += "Maven Central Server" at "http://repo1.maven.org/maven2"
 val commonSettings = sonatypeSettings ++ Seq(
   organization := "org.zalando.reactivenakadi",
   startYear := Some(2016),
-  scalaVersion := "2.11.7",
+  scalaVersion := "2.11.8",
   test in assembly := {},
   licenses := Seq("MIT license" -> url("https://opensource.org/licenses/MIT")),
   homepage := Some(url("https://github.com/zalando/reactive-nakadi")),
@@ -28,7 +28,6 @@ val commonSettings = sonatypeSettings ++ Seq(
 )
 
 libraryDependencies ++= Seq(
-  "joda-time" % "joda-time" % "2.3",
   "commons-logging" % "commons-logging" % "1.1.1",
   "com.typesafe.play" %% "play-json" % "2.5.4",
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -36,7 +35,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
   "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.60",
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test, it",
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test, it"
 )

@@ -1,20 +1,20 @@
 package org.zalando.react.nakadi.client.models
 
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
-
-import org.joda.time.{DateTimeZone, DateTime}
-import org.joda.time.format.ISODateTimeFormat
 
 import scala.util.control.Exception.nonFatalCatch
 
 
 object JsonOps {
 
-  implicit val jodaDateTimeReads = Reads[DateTime] {
+  implicit val OffsetDateTimeReads = Reads[OffsetDateTime] {
     _.validate[String].flatMap { dateStr =>
-      nonFatalCatch.either(new DateTime(dateStr, DateTimeZone.UTC)).fold(
+      nonFatalCatch.either(OffsetDateTime.parse(dateStr)).fold(
         ex => JsError(Seq(JsPath() -> Seq(ValidationError(ex.getMessage)))),
         JsSuccess(_)
       )
@@ -24,8 +24,8 @@ object JsonOps {
   implicit val readsMetaData: Reads[EventMetadata] = (
     (__ \ "eid").read[String] and
     (__ \ "event_type").readNullable[String] and
-    (__ \ "occurred_at").read[DateTime] and
-    (__ \ "received_at").readNullable[DateTime] and
+    (__ \ "occurred_at").read[OffsetDateTime] and
+    (__ \ "received_at").readNullable[OffsetDateTime] and
     (__ \ "parent_eids").readNullable[Seq[String]] and
     (__ \ "flow_id").readNullable[String]
   )(EventMetadata)
@@ -33,8 +33,8 @@ object JsonOps {
   implicit val writesMetaData: Writes[EventMetadata] = (
     (__ \ "eid").write[String] and
     (__ \ "event_type").writeNullable[String] and
-    (__ \ "occurred_at").write[String].contramap[DateTime](ISODateTimeFormat.dateTime().print) and
-    (__ \ "received_at").writeNullable[String].contramap[Option[DateTime]](_.map(ISODateTimeFormat.dateTime().print)) and
+    (__ \ "occurred_at").write[String].contramap[OffsetDateTime](_.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)) and
+    (__ \ "received_at").writeNullable[String].contramap[Option[OffsetDateTime]](_.map(_.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))) and
     (__ \ "parent_eids").writeNullable[Seq[String]] and
     (__ \ "flow_id").writeNullable[String]
   )(unlift(EventMetadata.unapply))

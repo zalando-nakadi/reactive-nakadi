@@ -1,12 +1,12 @@
 package org.zalando.react.nakadi.commit
 
-import org.joda.time.DateTime
+import java.time.OffsetDateTime
 
 case class OffsetTracking(
   partitionId: String,
   checkpointId: String,
   leaseHolder: String,
-  leaseTimestamp: DateTime,
+  leaseTimestamp: OffsetDateTime,
   leaseCounter: Option[Long] = None,
   leaseId: Option[String] = None
 )
