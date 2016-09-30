@@ -1,7 +1,7 @@
 package org.zalando.react.nakadi
 
 import akka.stream.actor.ActorPublisher
-import akka.actor.{ActorLogging, ActorRef, PoisonPill, Props}
+import akka.actor.{ActorLogging, ActorRef, PoisonPill, Props, ReceiveTimeout}
 import org.zalando.react.nakadi.commit.OffsetMap
 import org.zalando.react.nakadi.LeaseManagerActor.Flush
 import org.zalando.react.nakadi.client.models.EventStreamBatch
@@ -10,6 +10,8 @@ import org.zalando.react.nakadi.NakadiActorPublisher.CommitOffsets
 import org.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage}
 
 import scala.annotation.tailrec
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.control.NonFatal
 
 
@@ -24,6 +26,7 @@ object NakadiActorPublisher {
   }
 }
 
+case class NakadiTimeout(error: String) extends Exception(error)
 
 class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManager: ActorRef) extends ActorPublisher[StringConsumerMessage]
   with ActorLogging {
@@ -37,6 +40,8 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
   private val partition: String = consumerAndProps.properties.partition
   private val client: ActorRef = consumerAndProps.nakadiClient
   private var streamSupervisor: Option[ActorRef] = None
+  private val reconnectTimeout: Duration = consumerAndProps.properties.batchFlushTimeoutInSeconds * 1.5
+  context.setReceiveTimeout(reconnectTimeout)
 
   private val MaxBufferSize = 100
   private var buf = Vector.empty[StringConsumerMessage]
@@ -53,6 +58,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
     case NakadiActorPublisher.Stop                        => stop()
     case CommitOffsets(offsetMap)                         => executeCommit(offsetMap)
     case NonFatal(err)                                    => onError(err)
+    case ReceiveTimeout                                   => throw NakadiTimeout(s"No events from Nakadi in the last $reconnectTimeout seconds...")
   }
 
   private def registerSupervisor(ref: ActorRef) = {
