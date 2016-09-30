@@ -10,8 +10,7 @@ import org.zalando.react.nakadi.NakadiActorPublisher.CommitOffsets
 import org.zalando.react.nakadi.NakadiMessages.{Offset, StringConsumerMessage}
 
 import scala.annotation.tailrec
-import scala.concurrent.duration._
-import scala.language.postfixOps
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 
