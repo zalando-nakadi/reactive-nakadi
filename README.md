@@ -15,7 +15,7 @@ An important point to note is that it is a library that can only be used in an A
 Available in Maven Central for Scala 2.11:
 
 ```scala
-libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.05"
+libraryDependencies += "org.zalando.reactivenakadi" %% "reactive-nakadi-core" % "0.0.07"
 ```
 
 ###Usage
