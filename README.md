@@ -1,6 +1,6 @@
 # Reactive Streams for Nakadi
 
-[![Build Status](https://travis-ci.org/zalando/reactive-nakadi.svg?branch=master)](https://travis-ci.org/zalando/reactive-nakadi) [![Coverage Status](https://coveralls.io/repos/github/zalando/reactive-nakadi/badge.svg?branch=master)](https://coveralls.io/github/zalando/reactive-nakadi?branch=master)
+[![Build Status](https://travis-ci.org/zalando-incubator/reactive-nakadi.svg?branch=master)](https://travis-ci.org/zalando-incubator/reactive-nakadi) [![Coverage Status](https://coveralls.io/repos/github/zalando-incubator/reactive-nakadi/badge.svg?branch=master)](https://coveralls.io/github/zalando/reactive-nakadi?branch=master)
 
 [Reactive Streams](http://www.reactive-streams.org) wrapper for [Nakadi](https://github.com/zalando/nakadi) is enspired by [Reactive Kafka](https://github.com/softwaremill/reactive-kafka). Reactive-Nakadi is built using Akka, Akka Http and Akka Streams while communicating with Nakadi's low level API. It acts as a consumer client for Nakadi providing an interface for consuming and publishing events, while making use of Akka's backpressure functionality. It also provides offset checkpointing and later to provide high level lease management across multiple partitions.
 
