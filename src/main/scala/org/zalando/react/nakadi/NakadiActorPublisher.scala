@@ -40,8 +40,6 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
   private val client: ActorRef = consumerAndProps.nakadiClient
   private var streamSupervisor: Option[ActorRef] = None
   private val reconnectTimeout: Duration = consumerAndProps.properties.batchFlushTimeoutInSeconds * 1.5
-  context.setReceiveTimeout(reconnectTimeout)
-
   private val MaxBufferSize = 100
   private var buf = Vector.empty[StringConsumerMessage]
 
@@ -129,6 +127,7 @@ class NakadiActorPublisher(consumerAndProps: ReactiveNakadiConsumer, leaseManage
 
   def start() = {
     if (!isRunning) {
+      context.setReceiveTimeout(reconnectTimeout)
       isRunning = true
       client ! ConsumeCommand.Start
     }
