@@ -20,6 +20,8 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
   override val dockerProvider: DockerProvider = new NakadiDockerProvider
   override implicit val system: ActorSystem = ActorSystem("ReactiveNakadiSubscriberSpec")
 
+  def padding(s: String) = "%018d".format(s.toInt)
+
   def generateEvent = {
     DataChangeEvent(
       data_type = "test_data_type",
@@ -79,7 +81,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val result = Await.result(resultFut, 30.seconds)
     validateEvent(result.events.head, event)
     result.eventType should === (eventType)
-    result.cursor should === (Cursor(partition = "0", offset = Offset("0")))
+    result.cursor should === (Cursor(partition = "0", offset = Offset(padding("0"))))
   }
 
   it should "consume multiple messages as separate events" in {
@@ -109,7 +111,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream from 1).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
@@ -141,7 +143,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream from 11).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
@@ -173,7 +175,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream from 21).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
@@ -208,11 +210,11 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     val result = Await.result(resultFut, 30.seconds)
     result.size should === (2)
     result.head.eventType should === (eventType)
-    result.head.cursor should === (Cursor(partition = "0", offset = Offset("1030")))
+    result.head.cursor should === (Cursor(partition = "0", offset = Offset(padding("1030"))))
     result.head.events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
 
     result(1).eventType should === (eventType)
-    result(1).cursor should === (Cursor(partition = "0", offset = Offset("1040")))
+    result(1).cursor should === (Cursor(partition = "0", offset = Offset(padding("1040"))))
     result(1).events.foreach(ev => validateEvent(ev, events(ev.metadata.eid)))
   }
 
@@ -246,7 +248,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream.range(1041, 1050)).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
@@ -281,7 +283,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream.range(1051, 1060)).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
@@ -317,7 +319,7 @@ class ReactiveNakadiSubscriberSpec extends NakadiTest {
     result.zip(Stream.range(1061, 1070)).foreach {
       case (res, idx) =>
         res.eventType should === (eventType)
-        res.cursor should === (Cursor(partition = "0", offset = Offset(idx.toString)))
+        res.cursor should === (Cursor(partition = "0", offset = Offset(padding(idx.toString))))
         validateEvent(res.events.head, events(res.events.head.metadata.eid))
     }
   }
